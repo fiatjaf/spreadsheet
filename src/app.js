@@ -1,7 +1,7 @@
 import {Observable} from 'rx'
 import {h} from '@cycle/dom'
 
-import State from './state-factory'
+import Cells from './cells'
 
 function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
@@ -118,88 +118,64 @@ function modifications (actions) {
     })
 
   return Observable.merge(
-    moveHighlightMod$, setHighlightMod$, selectHighlightedMod$, hideMod$
+    moveHighlightMod$,
+    setHighlightMod$,
+    selectHighlightedMod$,
+    hideMod$
   )
-}
-
-function model (suggestionsFromResponse$, actions) {
-  const mod$ = modifications(actions)
-
-  const state$ = suggestionsFromResponse$
-    .withLatestFrom(actions.wantsSuggestions$,
-      (suggestions, accepted) => accepted ? suggestions : []
-    )
-    .startWith([])
-    .map(suggestions => new State({suggestions, highlighted: null, selected: null}))
-    .flatMapLatest(state => mod$.startWith(state).scan((acc, mod) => mod(acc)))
-    .share()
-
-  return state$
-}
-
-function view (state$) {
-  return state$.map(state => {
-    let suggestions = state.get('suggestions')
-    let selected = state.get('selected')
-    return (
-      h('div.container', [
-        h('section', [
-          h('label.search-label', 'Query:'),
-          h('span.combo-box', [
-            h('input.autocompleteable', {
-              type: 'text',
-              'data-hook': new ControlledInputHook(selected)}
-            ),
-            suggestions.length === 0 ? null : h('ul.autocomplete-menu',
-              suggestions.map((suggestion, index) =>
-                h('li.autocomplete-item', {attributes: {'data-index': index}},
-                  suggestion
-                )
-              )
-            )
-          ])
-        ])
-      ])
-    )
-  })
-}
-
-const BASE_URL = 'https://en.wikipedia.org/w/api.php?action=opensearch&format=json&search='
-
-const networking = {
-  processResponses (JSONP) {
-    return JSONP.filter(res$ => res$.request.indexOf(BASE_URL) === 0)
-      .switch()
-      .map(res => res[1])
-  },
-
-  generateRequests (searchQuery$) {
-    return searchQuery$.map(q => BASE_URL + encodeURI(q))
-  }
 }
 
 function preventedEvents (actions, state$) {
   return actions.keepFocusOnInput$
     .withLatestFrom(state$, (event, state) => {
-      if (state.get('suggestions').length > 0 && state.get('highlighted') !== null) {
-        return event
-      } else {
-        return null
-      }
+      return event
     })
     .filter(ev => ev !== null)
 }
 
-export default function app (responses) {
-  let suggestionsFromResponse$ = networking.processResponses(responses.JSONP)
-  let actions = intent(responses.DOM)
-  let state$ = model(suggestionsFromResponse$, actions)
-  let vtree$ = view(state$)
+export default function app ({DOM, cells$, state$}) {
+  let actions = intent(DOM)
+
+  let mod$ = modifications(actions)
+  cells$ = cells$
+    .combineLatest(mod$, (cells, mod) => cells)
+    .share()
+    .startWith(new Cells(3, 3))
+    .do(x => console.log('cells', x))
+
+  state$ = state$
+    .combineLatest(mod$, (state, mod) => state)
+    .share()
+    .startWith({})
+    .do(x => console.log('state', x))
+
+  let vtree$ = Observable.combineLatest(
+    cells$,
+    state$,
+    (cells, state) =>
+      h('main',
+        cells.byRowColumn.map(row =>
+          h('div.row',
+            row.map(cell => {
+              let cn = state.selected === cell.name ? 'selected' : ''
+
+              if (cell.name !== state.editing) {
+                return h('div.cell', {className: cn}, cell.calc)
+              } else {
+                return h('div.cell.editing', {className: cn}, [
+                  h('input', {value: cell.raw})
+                ])
+              }
+            })
+          )
+        )
+      )
+  )
+
   let prevented$ = preventedEvents(actions, state$)
-  let searchRequest$ = networking.generateRequests(actions.search$)
   return {
-    DOM: vtree$,
-    preventDefault: prevented$,
-    JSONP: searchRequest$
+    DOM: vtree$
+           .do(x => console.log('cells', x)),
+    preventDefault: prevented$
   }
 }
