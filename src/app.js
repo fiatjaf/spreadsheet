@@ -1,7 +1,8 @@
 import {Observable} from 'rx'
 import {h} from '@cycle/dom'
+// import Thunk from 'vdom-thunk'
 
-import Cells from './cells'
+const Cells = require('./cells').default
 
 function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
@@ -25,6 +26,10 @@ function notBetween (first, second) {
 }
 
 function intent (DOM) {
+  let cellDblClick$ = DOM.select('.cell:not(.editing)').events('dblclick')
+  let cellInput$ = DOM.select('.cell.editing input').events('input')
+  let cellBlur$ = DOM.select('.cell.editing input').events('blur')
+
   let UP_KEYCODE = 38
   let DOWN_KEYCODE = 40
   let ENTER_KEYCODE = 13
@@ -37,7 +42,6 @@ function intent (DOM) {
   let itemMouseUp$ = DOM.select('.autocomplete-item').events('mouseup')
   let inputFocus$ = DOM.select('.autocompleteable').events('focus')
   let inputBlur$ = DOM.select('.autocompleteable').events('blur')
-  let cellDblClick$ = DOM.select('.cell:not(.editing)').events('dblclick')
 
   let enterPressed$ = keydown$.filter(({keyCode}) => keyCode === ENTER_KEYCODE)
   let tabPressed$ = keydown$.filter(({keyCode}) => keyCode === TAB_KEYCODE)
@@ -51,6 +55,9 @@ function intent (DOM) {
   return {
     editCell$: cellDblClick$
       .map(ev => ev.target.dataset.name),
+    cellInput$: cellInput$
+      .map(ev => ev.target.value),
+    stopEdit$: cellBlur$,
     search$: input$
       .debounce(500)
       .let(between(inputFocus$, inputBlur$))
@@ -82,9 +89,23 @@ function intent (DOM) {
 
 function modifications (actions) {
   let markCellEditingMod$ = actions.editCell$
-    .map(cellName => function (state) {
+    .map(cellName => function (state, cells) {
       state.editing = cellName
-      return state
+      return {state, cells}
+    })
+
+  let saveCurrentInputMod$ = actions.cellInput$
+    .map(val => function (state, cells) {
+      state.currentInput = val
+      return {state, cells}
+    })
+
+  let markNoneEditingMod$ = actions.stopEdit$
+    .map(() => function (state, cells) {
+      cells.setByName(state.editing, state.currentInput)
+      state.editing = null
+      state.currentInput = null
+      return {state, cells}
     })
 
   let moveHighlightMod$ = actions.moveHighlight$
@@ -128,6 +149,8 @@ function modifications (actions) {
 
   return Observable.merge(
     markCellEditingMod$,
+    saveCurrentInputMod$,
+    markNoneEditingMod$,
     moveHighlightMod$,
     setHighlightMod$,
     selectHighlightedMod$,
@@ -146,23 +169,27 @@ function preventedEvents (actions, state$) {
 export default function app ({DOM, cells$, state$}) {
   let actions = intent(DOM)
 
+  let mod$ = modifications(actions)
+    .startWith((state, cells) => ({state, cells}))
+
   cells$ = cells$
     .share()
     .startWith(new Cells(3, 3))
     .do(x => console.log('cells', x))
 
-  let mod$ = modifications(actions)
   state$ = state$
-    .combineLatest(mod$, (state, mod) => mod(state))
     .share()
     .startWith({})
     .do(x => console.log('state', x))
 
   let vtree$ = Observable.combineLatest(
-    cells$,
     state$,
-    (cells, state) =>
-      h('main',
+    cells$,
+    mod$,
+    (state, cells, mod) => {
+      ({state, cells} = mod(state, cells))
+
+      return h('main',
         cells.byRowColumn.map(row =>
           h('div.row',
             row.map(cell => {
@@ -175,19 +202,23 @@ export default function app ({DOM, cells$, state$}) {
                 return h('div.cell', {
                   className: cn,
                   dataset: cd
-                }, cell.calc)
+                }, cell.calc || cell.raw)
               } else {
                 return h('div.cell.editing', {
                   className: cn,
                   dataset: cd
                 }, [
-                  h('input', {value: cell.raw, autofocus: true})
+                  h('input', {
+                    value: state.currentInput !== null ? state.currentInput : cell.raw,
+                    autofocus: true
+                  })
                 ])
               }
             })
           )
         )
       )
+    }
   )
 
   let prevented$ = preventedEvents(actions, state$)

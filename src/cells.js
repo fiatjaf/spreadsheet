@@ -22,7 +22,7 @@ class Cells {
       this.letterIndex[letter] = col
 
       for (let row = 0; row < height; row++) {
-        let name = `${letter}${row}`
+        let name = `${letter}${row + 1}`
         let cell = {raw: '', calc: '', name: name, row: row, col: col}
 
         this.byName[name] = cell
@@ -43,8 +43,8 @@ class Cells {
 
   setByName (name, value) {
     let [letter, rowStr] = regex.exec(name).slice(1)
-    let row = parseInt(rowStr, 10)
-    let col = letter.toLowerCase()
+    let row = parseInt(rowStr, 10) - 1
+    let col = this.letterIndex[letter.toLowerCase()]
 
     this.setByRowColumn(row, col, value)
   }
