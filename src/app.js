@@ -37,6 +37,7 @@ function intent (DOM) {
   let itemMouseUp$ = DOM.select('.autocomplete-item').events('mouseup')
   let inputFocus$ = DOM.select('.autocompleteable').events('focus')
   let inputBlur$ = DOM.select('.autocompleteable').events('blur')
+  let cellDblClick$ = DOM.select('.cell:not(.editing)').events('dblclick')
 
   let enterPressed$ = keydown$.filter(({keyCode}) => keyCode === ENTER_KEYCODE)
   let tabPressed$ = keydown$.filter(({keyCode}) => keyCode === TAB_KEYCODE)
@@ -48,6 +49,8 @@ function intent (DOM) {
   )
 
   return {
+    editCell$: cellDblClick$
+      .map(ev => ev.target.dataset.name),
     search$: input$
       .debounce(500)
       .let(between(inputFocus$, inputBlur$))
@@ -78,6 +81,12 @@ function intent (DOM) {
 }
 
 function modifications (actions) {
+  let markCellEditingMod$ = actions.editCell$
+    .map(cellName => function (state) {
+      state.editing = cellName
+      return state
+    })
+
   let moveHighlightMod$ = actions.moveHighlight$
     .map(delta => function (state) {
       let suggestions = state.get('suggestions')
@@ -118,6 +127,7 @@ function modifications (actions) {
     })
 
   return Observable.merge(
+    markCellEditingMod$,
     moveHighlightMod$,
     setHighlightMod$,
     selectHighlightedMod$,
@@ -136,15 +146,14 @@ function preventedEvents (actions, state$) {
 export default function app ({DOM, cells$, state$}) {
   let actions = intent(DOM)
 
-  let mod$ = modifications(actions)
   cells$ = cells$
-    .combineLatest(mod$, (cells, mod) => cells)
     .share()
     .startWith(new Cells(3, 3))
     .do(x => console.log('cells', x))
 
+  let mod$ = modifications(actions)
   state$ = state$
-    .combineLatest(mod$, (state, mod) => state)
+    .combineLatest(mod$, (state, mod) => mod(state))
     .share()
     .startWith({})
     .do(x => console.log('state', x))
@@ -158,12 +167,21 @@ export default function app ({DOM, cells$, state$}) {
           h('div.row',
             row.map(cell => {
               let cn = state.selected === cell.name ? 'selected' : ''
+              let cd = {
+                name: cell.name
+              }
 
               if (cell.name !== state.editing) {
-                return h('div.cell', {className: cn}, cell.calc)
+                return h('div.cell', {
+                  className: cn,
+                  dataset: cd
+                }, cell.calc)
               } else {
-                return h('div.cell.editing', {className: cn}, [
-                  h('input', {value: cell.raw})
+                return h('div.cell.editing', {
+                  className: cn,
+                  dataset: cd
+                }, [
+                  h('input', {value: cell.raw, autofocus: true})
                 ])
               }
             })
