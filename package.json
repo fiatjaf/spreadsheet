@@ -9,7 +9,8 @@
     "cycle-restart": "0.0.9",
     "immupdate": "^0.2.0",
     "letters": "0.0.2",
-    "rx": "4.0.7"
+    "rx": "4.0.7",
+    "vdom-thunk": "^3.0.0"
   },
   "devDependencies": {
     "babel-core": "^6.4.5",

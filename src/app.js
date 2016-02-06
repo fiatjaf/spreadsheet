@@ -1,8 +1,8 @@
 import {Observable} from 'rx'
 import {h} from '@cycle/dom'
-// import Thunk from 'vdom-thunk'
 
-const Cells = require('./cells').default
+import partial from './partial'
+import Cells from './cells'
 
 function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
@@ -90,7 +90,11 @@ function intent (DOM) {
 function modifications (actions) {
   let markCellEditingMod$ = actions.editCell$
     .map(cellName => function (state, cells) {
+      let cell = cells.getByName(cellName)
+
       state.editing = cellName
+      cells.bumpRowRev(cell.row)
+      cells.bumpColumnRev(cell.column)
       return {state, cells}
     })
 
@@ -190,32 +194,8 @@ export default function app ({DOM, cells$, state$}) {
       ({state, cells} = mod(state, cells))
 
       return h('main',
-        cells.byRowColumn.map(row =>
-          h('div.row',
-            row.map(cell => {
-              let cn = state.selected === cell.name ? 'selected' : ''
-              let cd = {
-                name: cell.name
-              }
-
-              if (cell.name !== state.editing) {
-                return h('div.cell', {
-                  className: cn,
-                  dataset: cd
-                }, cell.calc || cell.raw)
-              } else {
-                return h('div.cell.editing', {
-                  className: cn,
-                  dataset: cd
-                }, [
-                  h('input', {
-                    value: state.currentInput !== null ? state.currentInput : cell.raw,
-                    autofocus: true
-                  })
-                ])
-              }
-            })
-          )
+        cells.byRowColumn.map((row, i) =>
+          thunk.row(i, vrender.row, state, row, cells.rowRev[i])
         )
       )
     }
@@ -227,4 +207,52 @@ export default function app ({DOM, cells$, state$}) {
            .do(x => console.log('cells', x)),
     preventDefault: prevented$
   }
+}
+
+const vrender = {
+  cell: function (state, cell) {
+    let cn = state.selected === cell.name ? 'selected' : ''
+    let cd = {
+      name: cell.name
+    }
+
+    if (cell.name !== state.editing) {
+      return h('div.cell', {
+        className: cn,
+        dataset: cd
+      }, cell.calc || cell.raw)
+    } else {
+      return h('div.cell.editing', {
+        className: cn,
+        dataset: cd
+      }, [
+        h('input', {
+          value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
+          autofocus: true
+        })
+      ])
+    }
+  },
+  row: function (state, row) {
+    return h('div.row',
+      row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell))
+    )
+  }
+}
+
+const thunk = {
+  cell: partial(function ([currState, currCell], [nextState, nextCell]) {
+    return !(
+     // this cell is taking part on the edit
+     (
+      (nextState.editing !== currCell.name || currState.editing !== currCell.name) &&
+      currState.editing === nextState.editing
+     ) ||
+      // or no edit is happening but its display value has changed
+      (currCell.calc || currCell.raw) === (nextCell.calc || nextCell.raw)
+    )
+  }),
+  row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {
+    return currRowRev === nextRowRev
+  })
 }

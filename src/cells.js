@@ -23,20 +23,29 @@ class Cells {
 
       for (let row = 0; row < height; row++) {
         let name = `${letter}${row + 1}`
-        let cell = {raw: '', calc: '', name: name, row: row, col: col}
+        let cell = {
+          raw: '',
+          calc: '',
+          name: name,
+          row: row,
+          column: col
+        }
 
         this.byName[name] = cell
         this.byRowColumn[row] = (this.byRowColumn[row] || []).concat(cell)
       }
 
-      this.columnRev[col] = (this.columnRev || 0) + 1
-      this.rowRev[col] = (this.rowRev || 0) + 1
+      this.columnRev[col] = (this.columnRev[col] || 0) + 1
+    }
+
+    for (let row = 0; row < height; row++) {
+      this.rowRev[row] = (this.rowRev[row] || 0) + 1
     }
   }
 
   setByRowColumn (row, column, value) {
-    this.columnRev[column]++
-    this.rowRev[row]++
+    this.bumpColumnRev(column)
+    this.bumpRowRev(row)
 
     this.byRowColumn[row][column].raw = value
   }
@@ -55,6 +64,14 @@ class Cells {
 
   getByRowColumn (row, column) {
     return this.byRowColumn[row][column]
+  }
+
+  bumpRowRev (row) {
+    this.rowRev[row]++
+  }
+
+  bumpColumnRev (row) {
+    this.columnRev[row]++
   }
 }
 
