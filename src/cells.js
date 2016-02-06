@@ -1,6 +1,6 @@
 import Letters from 'letters'
 
-const regex = /(\D+)(\d+)/
+// const regex = /(\D+)(\d+)/
 
 class Cells {
   constructor (w, h) {
@@ -15,11 +15,11 @@ class Cells {
 
   resetGrid (width, height) {
     this.letters = new Letters() // this is lowercase
-    this.letterIndex = {}
+    // this.letterIndex = {}
 
     for (let col = 0; col < width; col++) {
       let letter = this.letters.next()
-      this.letterIndex[letter] = col
+      // this.letterIndex[letter] = col
 
       for (let row = 0; row < height; row++) {
         let name = `${letter}${row + 1}`
@@ -28,7 +28,8 @@ class Cells {
           calc: '',
           name: name,
           row: row,
-          column: col
+          column: col,
+          rev: 0
         }
 
         this.byName[name] = cell
@@ -48,14 +49,17 @@ class Cells {
     this.bumpRowRev(row)
 
     this.byRowColumn[row][column].raw = value
+    this.bumpCellRev(this.byRowColumn[row][column].name)
   }
 
   setByName (name, value) {
-    let [letter, rowStr] = regex.exec(name).slice(1)
-    let row = parseInt(rowStr, 10) - 1
-    let col = this.letterIndex[letter.toLowerCase()]
+    // let [letter, rowStr] = regex.exec(name).slice(1)
+    // let row = parseInt(rowStr, 10) - 1
+    // let col = this.letterIndex[letter.toLowerCase()]
+    let cell = this.byName[name]
 
-    this.setByRowColumn(row, col, value)
+    this.setByRowColumn(cell.row, cell.column, value)
+    this.bumpCellRev(name)
   }
 
   getByName (name) {
@@ -72,6 +76,10 @@ class Cells {
 
   bumpColumnRev (row) {
     this.columnRev[row]++
+  }
+
+  bumpCellRev (cellName) {
+    this.byName[cellName].rev++
   }
 }
 

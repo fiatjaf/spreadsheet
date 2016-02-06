@@ -42,6 +42,7 @@ function notBetween (first, second) {
 }
 
 function intent (DOM) {
+  let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellDblClick$ = DOM.select('.cell:not(.editing)').events('dblclick')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
   let cellBlur$ = DOM.select('.cell.editing input').events('blur')
@@ -69,6 +70,8 @@ function intent (DOM) {
   )
 
   return {
+    selectCell$: cellClick$
+      .map(ev => ev.target.dataset.name),
     editCell$: cellDblClick$
       .map(ev => ev.target.dataset.name),
     cellInput$: cellInput$
@@ -104,6 +107,25 @@ function intent (DOM) {
 }
 
 function modifications (actions) {
+  let selectCellMod$ = actions.selectCell$
+    .map(cellName => function (state, cells) {
+      // unmark the old selected cell
+      let old = cells.getByName(state.selected)
+      if (old) {
+        cells.bumpRowRev(old.row)
+        cells.bumpColumnRev(old.column)
+        cells.bumpCellRev(old.name)
+      }
+
+      // mark the new cell
+      let cell = cells.getByName(cellName)
+      state.selected = cell.name
+      cells.bumpRowRev(cell.row)
+      cells.bumpColumnRev(cell.column)
+      cells.bumpCellRev(cell.name)
+      return {state, cells}
+    })
+
   let markCellEditingMod$ = actions.editCell$
     .map(cellName => function (state, cells) {
       let cell = cells.getByName(cellName)
@@ -111,6 +133,7 @@ function modifications (actions) {
       state.editing = cellName
       cells.bumpRowRev(cell.row)
       cells.bumpColumnRev(cell.column)
+      cells.bumpCellRev(cell.name)
       return {state, cells}
     })
 
@@ -125,10 +148,11 @@ function modifications (actions) {
       let cell = cells.getByName(state.editing)
 
       cells.setByRowColumn(cell.row, cell.column, state.currentInput)
-      cells.bumpRowRev(cell.row)
-      cells.bumpColumnRev(cell.column)
       state.editing = null
       state.currentInput = null
+      cells.bumpRowRev(cell.row)
+      cells.bumpColumnRev(cell.column)
+      cells.bumpCellRev(cell.name)
       return {state, cells}
     })
 
@@ -172,6 +196,7 @@ function modifications (actions) {
     })
 
   return Observable.merge(
+    selectCellMod$,
     markCellEditingMod$,
     saveCurrentInputMod$,
     markNoneEditingMod$,
@@ -199,12 +224,10 @@ export default function app ({DOM, cells$, state$}) {
   cells$ = cells$
     .share()
     .startWith(new Cells(3, 3))
-    .do(x => console.log('cells', x))
 
   state$ = state$
     .share()
     .startWith({})
-    .do(x => console.log('state', x))
 
   let vtree$ = Observable.combineLatest(
     state$,
@@ -223,8 +246,7 @@ export default function app ({DOM, cells$, state$}) {
 
   let prevented$ = preventedEvents(actions, state$)
   return {
-    DOM: vtree$
-           .do(x => console.log('cells', x)),
+    DOM: vtree$,
     preventDefault: prevented$
   }
 }
@@ -255,22 +277,27 @@ const vrender = {
   },
   row: function (state, row) {
     return h('div.row',
-      row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell))
+      row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev))
     )
   }
 }
 
 const thunk = {
-  cell: partial(function ([currState, currCell], [nextState, nextCell]) {
-    return !(
-     // this cell is taking part on the edit
-     (
-      (nextState.editing !== currCell.name || currState.editing !== currCell.name) &&
-      currState.editing === nextState.editing
-     ) ||
-      // or no edit is happening but its display value has changed
-      (currCell.calc || currCell.raw) === (nextCell.calc || nextCell.raw)
-    )
+  cell: partial(function ([currState, currCell, currCellRev], [nextState, nextCell, nextCellRev]) {
+    return currCellRev === nextCellRev
+    // return !(
+    //  // this cell is taking part on the edit
+    //  (
+    //   (nextState.editing !== currCell.name || currState.editing !== currCell.name) &&
+    //   currState.editing === nextState.editing
+    //  ) ||
+    //  (
+    //   (nextState.selected !== currCell.name || currState.selected !== currCell.name) &&
+    //   currState.selected === nextState.selected
+    //  ) ||
+    //   // or no edit is happening but its display value has changed
+    //   (currCell.calc || currCell.raw) === (nextCell.calc || nextCell.raw)
+    // )
   }),
   row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {
     return currRowRev === nextRowRev
