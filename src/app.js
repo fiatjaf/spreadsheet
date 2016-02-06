@@ -14,6 +14,22 @@ ControlledInputHook.prototype.hook = function hook (element) {
   }
 }
 
+class FocusHook {
+  hook (element) {
+    (function deselect () {
+      let selection = ('getSelection' in window)
+        ? window.getSelection()
+        : ('selection' in document)
+          ? document.selection
+          : null
+      if ('removeAllRanges' in selection) selection.removeAllRanges()
+      else if ('empty' in selection) selection.empty()
+    })()
+
+    element.focus()
+  }
+}
+
 function between (first, second) {
   return (source) => source.window(first, () => second).switch()
 }
@@ -106,7 +122,11 @@ function modifications (actions) {
 
   let markNoneEditingMod$ = actions.stopEdit$
     .map(() => function (state, cells) {
-      cells.setByName(state.editing, state.currentInput)
+      let cell = cells.getByName(state.editing)
+
+      cells.setByRowColumn(cell.row, cell.column, state.currentInput)
+      cells.bumpRowRev(cell.row)
+      cells.bumpColumnRev(cell.column)
       state.editing = null
       state.currentInput = null
       return {state, cells}
@@ -228,7 +248,7 @@ const vrender = {
       }, [
         h('input', {
           value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
-          autofocus: true
+          'data-hook': new FocusHook()
         })
       ])
     }
