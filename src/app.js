@@ -14,20 +14,19 @@ ControlledInputHook.prototype.hook = function hook (element) {
   }
 }
 
-class FocusHook {
-  hook (element) {
-    (function deselect () {
-      let selection = ('getSelection' in window)
-        ? window.getSelection()
-        : ('selection' in document)
-          ? document.selection
-          : null
-      if ('removeAllRanges' in selection) selection.removeAllRanges()
-      else if ('empty' in selection) selection.empty()
-    })()
+function FocusHook () {}
+FocusHook.prototype.hook = function hook (element) {
+  (function deselect () {
+    let selection = ('getSelection' in window)
+      ? window.getSelection()
+      : ('selection' in document)
+        ? document.selection
+        : null
+    if ('removeAllRanges' in selection) selection.removeAllRanges()
+    else if ('empty' in selection) selection.empty()
+  })()
 
-    element.focus()
-  }
+  setTimeout(() => element.focus(), 1)
 }
 
 function between (first, second) {
@@ -43,9 +42,13 @@ function notBetween (first, second) {
 
 function intent (DOM) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
-  let cellDblClick$ = DOM.select('.cell:not(.editing)').events('dblclick')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
   let cellBlur$ = DOM.select('.cell.editing input').events('blur')
+
+  let bufferedCellClick$ = cellClick$
+    .map(ev => ev.target.dataset.name)
+    .buffer(() => cellClick$.debounce(300))
+    .share()
 
   let UP_KEYCODE = 38
   let DOWN_KEYCODE = 40
@@ -70,10 +73,14 @@ function intent (DOM) {
   )
 
   return {
-    selectCell$: cellClick$
-      .map(ev => ev.target.dataset.name),
-    editCell$: cellDblClick$
-      .map(ev => ev.target.dataset.name),
+    selectCell$: bufferedCellClick$
+      .filter(names => names.length === 1)
+      .do(x => console.log('single click, select cell.'))
+      .map(names => names[0]),
+    editCell$: bufferedCellClick$
+      .filter(names => names.length > 1)
+      .do(x => console.log('double click, select cell.'))
+      .map(names => names[0]),
     cellInput$: cellInput$
       .map(ev => ev.target.value),
     stopEdit$: cellBlur$,
@@ -128,9 +135,18 @@ function modifications (actions) {
 
   let markCellEditingMod$ = actions.editCell$
     .map(cellName => function (state, cells) {
-      let cell = cells.getByName(cellName)
+      // unmark the old selected cell
+      let old = cells.getByName(state.selected)
+      if (old) {
+        state.selected = null
+        cells.bumpRowRev(old.row)
+        cells.bumpColumnRev(old.column)
+        cells.bumpCellRev(old.name)
+      }
 
-      state.editing = cellName
+      // mark the new cell as editing
+      let cell = cells.getByName(cellName)
+      state.editing = cell.name
       cells.bumpRowRev(cell.row)
       cells.bumpColumnRev(cell.column)
       cells.bumpCellRev(cell.name)
@@ -285,19 +301,6 @@ const vrender = {
 const thunk = {
   cell: partial(function ([currState, currCell, currCellRev], [nextState, nextCell, nextCellRev]) {
     return currCellRev === nextCellRev
-    // return !(
-    //  // this cell is taking part on the edit
-    //  (
-    //   (nextState.editing !== currCell.name || currState.editing !== currCell.name) &&
-    //   currState.editing === nextState.editing
-    //  ) ||
-    //  (
-    //   (nextState.selected !== currCell.name || currState.selected !== currCell.name) &&
-    //   currState.selected === nextState.selected
-    //  ) ||
-    //   // or no edit is happening but its display value has changed
-    //   (currCell.calc || currCell.raw) === (nextCell.calc || nextCell.raw)
-    // )
   }),
   row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {
     return currRowRev === nextRowRev

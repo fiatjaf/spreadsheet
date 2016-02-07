@@ -15,11 +15,9 @@ class Cells {
 
   resetGrid (width, height) {
     this.letters = new Letters() // this is lowercase
-    // this.letterIndex = {}
 
     for (let col = 0; col < width; col++) {
       let letter = this.letters.next()
-      // this.letterIndex[letter] = col
 
       for (let row = 0; row < height; row++) {
         let name = `${letter}${row + 1}`
@@ -53,9 +51,6 @@ class Cells {
   }
 
   setByName (name, value) {
-    // let [letter, rowStr] = regex.exec(name).slice(1)
-    // let row = parseInt(rowStr, 10) - 1
-    // let col = this.letterIndex[letter.toLowerCase()]
     let cell = this.byName[name]
 
     this.setByRowColumn(cell.row, cell.column, value)
