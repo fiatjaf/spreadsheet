@@ -1,8 +1,10 @@
 import {Observable} from 'rx'
 import {h} from '@cycle/dom'
+import document from 'global/document'
 
 import partial from './partial'
-import Cells from './cells'
+import Grid from './grid'
+import {deselect} from './helpers'
 
 function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
@@ -16,16 +18,7 @@ ControlledInputHook.prototype.hook = function hook (element) {
 
 function FocusHook () {}
 FocusHook.prototype.hook = function hook (element) {
-  (function deselect () {
-    let selection = ('getSelection' in window)
-      ? window.getSelection()
-      : ('selection' in document)
-        ? document.selection
-        : null
-    if ('removeAllRanges' in selection) selection.removeAllRanges()
-    else if ('empty' in selection) selection.empty()
-  })()
-
+  deselect()
   setTimeout(() => element.focus(), 1)
 }
 
@@ -47,8 +40,12 @@ function intent (DOM) {
 
   let bufferedCellClick$ = cellClick$
     .map(ev => ev.target.dataset.name)
-    .buffer(() => cellClick$.debounce(300))
+    .buffer(() => cellClick$.debounce(250))
     .share()
+
+  let cellMouseDown$ = DOM.select('.cell:not(.editing)').events('mousedown')
+  let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
+  let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
 
   let UP_KEYCODE = 38
   let DOWN_KEYCODE = 40
@@ -75,15 +72,19 @@ function intent (DOM) {
   return {
     selectCell$: bufferedCellClick$
       .filter(names => names.length === 1)
-      .do(x => console.log('single click, select cell.'))
       .map(names => names[0]),
     editCell$: bufferedCellClick$
       .filter(names => names.length > 1)
-      .do(x => console.log('double click, select cell.'))
       .map(names => names[0]),
     cellInput$: cellInput$
       .map(ev => ev.target.value),
     stopEdit$: cellBlur$,
+    startSelecting$: cellMouseDown$
+      .map(ev => ev.target.dataset.name),
+    alterSelection$: cellMouseEnter$
+      .map(ev => ev.target.dataset.name),
+    stopSelecting$: cellMouseUp$
+      .map(ev => ev.target.dataset.name),
     search$: input$
       .debounce(500)
       .let(between(inputFocus$, inputBlur$))
@@ -119,17 +120,21 @@ function modifications (actions) {
       // unmark the old selected cell
       let old = cells.getByName(state.selected)
       if (old) {
-        cells.bumpRowRev(old.row)
-        cells.bumpColumnRev(old.column)
-        cells.bumpCellRev(old.name)
+        cells.bumpCell(old.name)
+      }
+
+      // unmark the old selected range
+      if (state.selectionRange.start) {
+        let inRange = cells.getCellsInRange(state.selectionRange)
+        cells.bumpCells(inRange.map(c => c.name))
+        state.selecting = false
+        state.selectionRange = {}
       }
 
       // mark the new cell
       let cell = cells.getByName(cellName)
       state.selected = cell.name
-      cells.bumpRowRev(cell.row)
-      cells.bumpColumnRev(cell.column)
-      cells.bumpCellRev(cell.name)
+      cells.bumpCell(cell.name)
       return {state, cells}
     })
 
@@ -139,17 +144,21 @@ function modifications (actions) {
       let old = cells.getByName(state.selected)
       if (old) {
         state.selected = null
-        cells.bumpRowRev(old.row)
-        cells.bumpColumnRev(old.column)
-        cells.bumpCellRev(old.name)
+        cells.bumpCell(old.name)
+      }
+
+      // unmark the old selected range
+      if (state.selecting) {
+        let cells = cells.getCellsInRange(state.selectionRange)
+        cells.bumpCells(cells.map(c => c.name))
+        state.selecting = false
+        state.selectionRange = {}
       }
 
       // mark the new cell as editing
       let cell = cells.getByName(cellName)
       state.editing = cell.name
-      cells.bumpRowRev(cell.row)
-      cells.bumpColumnRev(cell.column)
-      cells.bumpCellRev(cell.name)
+      cells.bumpCell(cell.name)
       return {state, cells}
     })
 
@@ -163,12 +172,57 @@ function modifications (actions) {
     .map(() => function (state, cells) {
       let cell = cells.getByName(state.editing)
 
-      cells.setByRowColumn(cell.row, cell.column, state.currentInput)
+      if (cell && cell.raw !== state.currentInput) {
+        cells.setByRowColumn(cell.row, cell.column, state.currentInput)
+      }
       state.editing = null
       state.currentInput = null
-      cells.bumpRowRev(cell.row)
-      cells.bumpColumnRev(cell.column)
-      cells.bumpCellRev(cell.name)
+      cells.bumpCell(cell.name)
+      return {state, cells}
+    })
+
+  let startSelectingMod$ = actions.startSelecting$
+    .map((cellName) => function (state, cells) {
+      // unmark the old selected range
+      if (state.selecting) {
+        let cells = cells.getCellsInRange(state.selectionRange)
+        cells.bumpCells(cells.map(c => c.name))
+      }
+
+      let cell = cells.getByName(cellName)
+      state.selecting = true
+      state.selectionRange = {
+        start: cell,
+        end: cell
+      }
+      cells.bumpCell(cell.name)
+
+      return {state, cells}
+    })
+
+  let alterSelectionMod$ = actions.alterSelection$
+    .map((cellName) => function (state, cells) {
+      if (state.selecting) {
+        // cancel if the mouse key was released out of the browser window
+        let pressed = document.querySelectorAll('*:active')
+        if (!pressed.length ||
+            pressed[pressed.length - 1].dataset.name !== state.selectionRange.start.name) {
+          state.selectionRange = {}
+          state.selecting = false
+          return {state, cells}
+        }
+
+        // set the relevant range
+        let cell = cells.getByName(cellName)
+        state.selectionRange.end = cell
+        cells.bumpAllCells()
+      }
+      return {state, cells}
+    })
+
+  let stopSelectingMod$ = actions.stopSelecting$
+    .map((cellName) => function (state, cells) {
+      state.selecting = false
       return {state, cells}
     })
 
@@ -216,6 +270,9 @@ function modifications (actions) {
     markCellEditingMod$,
     saveCurrentInputMod$,
     markNoneEditingMod$,
+    startSelectingMod$,
+    alterSelectionMod$,
+    stopSelectingMod$,
     moveHighlightMod$,
     setHighlightMod$,
     selectHighlightedMod$,
@@ -239,11 +296,11 @@ export default function app ({DOM, cells$, state$}) {
 
   cells$ = cells$
     .share()
-    .startWith(new Cells(3, 3))
+    .startWith(new Grid(3, 3))
 
   state$ = state$
     .share()
-    .startWith({})
+    .startWith({areaSelect: {}})
 
   let vtree$ = Observable.combineLatest(
     state$,
@@ -269,7 +326,13 @@ export default function app ({DOM, cells$, state$}) {
 
 const vrender = {
   cell: function (state, cell) {
-    let cn = state.selected === cell.name ? 'selected' : ''
+    var classes = []
+    if (state.selected === cell.name) classes.push('selected')
+    if (state.selecting) {
+      if (Grid.cellInRange(cell, state.selectionRange)) classes.push('range')
+    }
+
+    let cn = classes.join(' ')
     let cd = {
       name: cell.name
     }

@@ -2,14 +2,19 @@
   box-sizing border-box
 
 div.row
+  -webkit-user-select: none;
+  -moz-user-select: none;
+
   clear both
+  width auto
+  overflow auto
 
   div.cell
     float left
-    height 1.6em
-    font-size 1.6em
+    height 1.4em
+    font-size 1.2em
     padding 2px 0.2em
-    width 5em
+    width 4em
     margin 1px
 
     &:first-child
@@ -25,9 +30,12 @@ div.row
 
       input
         font-size 1.2em
-        line-height 1.6em
+        line-height 1.4em
         width 100%
         height 100%
 
     &.selected
       border-color pink
+
+    &.range
+      background-color: rgba(100, 100, 100, 0.2)

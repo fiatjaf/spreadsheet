@@ -2,12 +2,11 @@ import Letters from 'letters'
 
 // const regex = /(\D+)(\d+)/
 
-class Cells {
+class Grid {
   constructor (w, h) {
     this.byName = {}
     this.byRowColumn = []
 
-    this.columnRev = {}
     this.rowRev = {}
 
     this.resetGrid(w, h)
@@ -33,8 +32,6 @@ class Cells {
         this.byName[name] = cell
         this.byRowColumn[row] = (this.byRowColumn[row] || []).concat(cell)
       }
-
-      this.columnRev[col] = (this.columnRev[col] || 0) + 1
     }
 
     for (let row = 0; row < height; row++) {
@@ -43,18 +40,15 @@ class Cells {
   }
 
   setByRowColumn (row, column, value) {
-    this.bumpColumnRev(column)
-    this.bumpRowRev(row)
-
     this.byRowColumn[row][column].raw = value
-    this.bumpCellRev(this.byRowColumn[row][column].name)
+    this.bumpCell(this.byRowColumn[row][column].name)
   }
 
   setByName (name, value) {
     let cell = this.byName[name]
 
     this.setByRowColumn(cell.row, cell.column, value)
-    this.bumpCellRev(name)
+    this.bumpCell(name)
   }
 
   getByName (name) {
@@ -65,17 +59,44 @@ class Cells {
     return this.byRowColumn[row][column]
   }
 
-  bumpRowRev (row) {
-    this.rowRev[row]++
+  bumpCell (cellName) {
+    let cell = this.byName[cellName]
+    cell.rev++
+    this.rowRev[cell.row]++
   }
 
-  bumpColumnRev (row) {
-    this.columnRev[row]++
+  bumpCellByRowColumn (row, column) {
+    let cell = this.byRowColumn[row][column]
+    this.bumpCell(cell.name)
   }
 
-  bumpCellRev (cellName) {
-    this.byName[cellName].rev++
+  bumpCells (names) {
+    names.forEach(name => this.bumpCell(name))
+  }
+
+  bumpAllCells () {
+    for (let name in this.byName) {
+      this.bumpCell(name)
+    }
+  }
+
+  getCellsInRange (range) {
+    var inRange = []
+    for (let name in this.byName) {
+      let cell = this.byName[name]
+      if (Grid.cellInRange(cell, range)) {
+        inRange.push(cell)
+      }
+    }
+    return inRange
+  }
+
+  static cellInRange (cell, range) {
+    return between(cell.column, range.start.column, range.end.column) &&
+           between(cell.row, range.start.row, range.end.row)
   }
 }
 
-export default Cells
+const between = (n, a, b) => a < b ? (a <= n) && (n <= b) : (b <= n) && (n <= a)
+
+export default Grid
