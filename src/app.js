@@ -11,7 +11,6 @@ function ControlledInputHook (injectedText) {
 }
 ControlledInputHook.prototype.hook = function hook (element) {
   element.value = this.injectedText
-  setTimeout(() => element.focus(), 1)
 }
 
 function FocusHook () {}
@@ -34,7 +33,8 @@ function notBetween (first, second) {
 function intent (DOM) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
-  let cellBlur$ = DOM.select('.sheet').events('blur')
+  let topInput$ = DOM.select('.top input').events('input')
+  let cellBlur$ = DOM.select('.cell.editing').events('blur')
 
   let bufferedCellClick$ = cellClick$
     .map(ev => ev.target.dataset.name)
@@ -74,7 +74,8 @@ function intent (DOM) {
     doubleCellClick$: bufferedCellClick$
       .filter(names => names.length > 1)
       .map(names => names[0]),
-    cellInput$: cellInput$
+    input$: cellInput$
+      .merge(topInput$)
       .map(ev => ev.target.value),
     cellBlur$: cellBlur$,
     startSelecting$: cellMouseDown$
@@ -170,11 +171,13 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let saveCurrentInputMod$ = actions.cellInput$
+  let saveCurrentInputMod$ = actions.input$
     .map(val => function (state, cells) {
-      let cell = cells.getByName(state.editing)
-      cell.raw = val
-      state.currentInput = val
+      if (state.editing) {
+        let cell = cells.getByName(state.editing)
+        cell.raw = val
+        state.currentInput = val
+      }
       return {state, cells}
     })
 
@@ -326,11 +329,12 @@ export default function app ({DOM}) {
     (state, cells, mod) => {
       ({state, cells} = mod(state, cells))
 
-      return h('main.sheet',
-        cells.byRowColumn.map((row, i) =>
+      return h('main', [
+        thunk.top('__top__', vrender.top, state, cells),
+        h('div.sheet', cells.byRowColumn.map((row, i) =>
           thunk.row(i, vrender.row, state, row, cells.rowRev[i])
-        )
-      )
+        ))
+      ])
     }
   )
 
@@ -366,7 +370,8 @@ const vrender = {
       }, [
         h('input', {
           value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
-          'data-hook': state.currentInput && state.currentInput !== cell.raw ? new ControlledInputHook(state.currentInput) : new FocusHook()
+          'focus-hook': new FocusHook(),
+          'input-hook': state.currentInput && state.currentInput !== cell.raw ? new ControlledInputHook(state.currentInput) : null
         })
       ])
     }
@@ -375,6 +380,15 @@ const vrender = {
     return h('div.row',
       row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev))
     )
+  },
+  top: function (state, cells) {
+    let selected = cells.getByName(state.selected)
+    let value = state.currentInput || selected && selected.raw || ''
+    return h('div.top', [
+      h('input', {
+        'input-hook': new ControlledInputHook(value)
+      })
+    ])
   }
 }
 
@@ -384,5 +398,11 @@ const thunk = {
   }),
   row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {
     return currRowRev === nextRowRev
+  }),
+  top: partial(function ([currState], [nextState]) {
+    return false
+    // return currState.selected === nextState.selected &&
+    //   currState.editing === nextState.editing &&
+    //   currState.currentInput === nextState.currentInput
   })
 }
