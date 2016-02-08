@@ -20,14 +20,14 @@ FocusHook.prototype.hook = function hook (element) {
   setTimeout(() => element.focus(), 1)
 }
 
-function intent (DOM, keydown$) {
+function intent (DOM, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
   let topInput$ = DOM.select('.top input').events('input')
   let cellBlur$ = DOM.select('.cell.editing').events('blur')
 
   let bufferedCellClick$ = cellClick$
-    .map(ev => ev.target.dataset.name)
+    .map(e => e.target.dataset.name)
     .buffer(() => cellClick$.debounce(250))
     .share()
 
@@ -36,6 +36,32 @@ function intent (DOM, keydown$) {
   let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
 
   let editingKeydown$ = DOM.select('.cell.editing input').events('keydown')
+
+  // filter only non-character-emitting keydown events
+  let nonCharacterKeydown$ = keydown$
+    // stop these events now, because after the delay
+    // it will be too late.
+    .do(e => {
+      let keyName = keycode(e)
+      if (keyName === 'tab' || keyName === 'up' ||
+          keyName === 'down' || keyName === 'left' ||
+          keyName === 'right') {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    })
+    .merge(
+      keypress$
+        .filter(e => String.fromCharCode(e.which || e.keyCode || e.charCode).trim())
+    )
+    // this ensures all keypresses will emit a buffer
+    .buffer(() => keydown$.delay(1))
+    // if a character-key was pressed, keypress$ will emit
+    // so the buffer will have 2 events, so we can use this
+    // to filter out keydowns with keypress attached
+    .filter(events => events.length === 1)
+    // then go back to the one event stream
+    .map(events => events[0])
 
   return {
     singleCellClick$: bufferedCellClick$
@@ -46,22 +72,23 @@ function intent (DOM, keydown$) {
       .map(names => names[0]),
     input$: cellInput$
       .merge(topInput$)
-      .map(ev => ev.target.value),
+      .map(e => e.target.value),
     cellBlur$: cellBlur$,
     startSelecting$: cellMouseDown$
-      .map(ev => ev.target.dataset.name),
+      .map(e => e.target.dataset.name),
     alterSelection$: cellMouseEnter$
-      .map(ev => ev.target.dataset.name),
+      .map(e => e.target.dataset.name),
     stopSelecting$: cellMouseUp$
-      .map(ev => ev.target.dataset.name),
-    keyCommand$: keydown$
-      .filter(ev => ev.target.tagName !== 'INPUT')
-      .do(ev => ev.preventDefault())
-      .do(ev => ev.stopPropagation())
+      .map(e => e.target.dataset.name),
+    keyCommand$: nonCharacterKeydown$
+      .filter(e => e.target.tagName !== 'INPUT')
       .map(keycode),
     keyCommandFromInput$: editingKeydown$
       .map(keycode)
-      .filter(keyName => keyName === 'esc' || keyName === 'enter')
+      .filter(keyName => keyName === 'esc' || keyName === 'enter'),
+    charEntered$: keypress$
+      .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode))
+      .filter(character => character.trim())
   }
 }
 
@@ -136,7 +163,7 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let markCellEditingMod$ = actions.doubleCellClick$
+  let startEditingFromDoubleClickMod$ = actions.doubleCellClick$
     .map(cellName => function (state, cells) {
       // unmark the old selected cell
       let old = cells.getByName(state.selected)
@@ -162,6 +189,32 @@ function modifications (actions) {
       return {state, cells}
     })
 
+  let startEditingFromCharEnteredMod$ = actions.charEntered$
+    .map(character => function (state, cells) {
+      if (state.selected) {
+        let cell = cells.getByName(state.selected)
+
+        // set the cell value and mark it as editing
+        state.editing = cell.name
+        state.valueBeforeEdit = cell.raw
+        cells.setByName(cell.name, character)
+        state.currentInput = cell.raw
+
+        // unselect it
+        state.selected = null
+
+        // unmark the old selected range
+        if (state.areaSelect.start) {
+          let inRange = cells.getCellsInRange(state.areaSelect)
+          cells.bumpCells(inRange.map(c => c.name))
+          state.selecting = false
+          state.areaSelect = {}
+        }
+      }
+
+      return {state, cells}
+    })
+
   let saveCurrentInputMod$ = actions.input$
     .map(val => function (state, cells) {
       state.currentInput = val
@@ -170,7 +223,7 @@ function modifications (actions) {
     })
 
   let stopEditingFromBlur$ = actions.cellBlur$
-    .map(ev => function (state, cells) {
+    .map(e => function (state, cells) {
       if (state.currentInput && state.currentInput[0] === '=') {
         // don't stop editing on blur if the current cell
         // being edited is a formula
@@ -262,7 +315,8 @@ function modifications (actions) {
   return Observable.merge(
     selectCellMod$,
     moveSelection$,
-    markCellEditingMod$,
+    startEditingFromDoubleClickMod$,
+    startEditingFromCharEnteredMod$,
     saveCurrentInputMod$,
     stopEditingFromBlur$,
     stopEditingFromEscapeMod$,
@@ -272,8 +326,12 @@ function modifications (actions) {
   )
 }
 
-export default function app ({DOM, keydown: keydown$}) {
-  let actions = intent(DOM, keydown$)
+export default function app ({
+  DOM,
+  keydown: keydown$,
+  keypress: keypress$
+}) {
+  let actions = intent(DOM, keydown$, keypress$)
 
   let mod$ = modifications(actions)
     .startWith((state, cells) => ({state, cells}))

@@ -116,7 +116,7 @@ class Grid {
   getNextRight (cell) {
     return this.getByRowColumn(
       cell.row,
-      cell.col === this.numColumns() - 1 ? this.numColumns() - 1 : cell.column + 1
+      cell.column === this.numColumns() - 1 ? this.numColumns() - 1 : cell.column + 1
     )
   }
 
