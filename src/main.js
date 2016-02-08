@@ -3,7 +3,6 @@ import Cycle from '@cycle/core'
 import {makeDOMDriver} from '@cycle/dom'
 import {restart, restartable} from 'cycle-restart'
 
-import Grid from './grid'
 var app = require('./app').default
 
 function preventDefaultSinkDriver (prevented$) {
@@ -16,14 +15,9 @@ function preventDefaultSinkDriver (prevented$) {
   return Observable.empty()
 }
 
-let cells$ = () => Observable.just(new Grid(10, 30))
-let state$ = () => Observable.just({areaSelect: {}})
-
 const drivers = {
   DOM: restartable(makeDOMDriver('#container'), {pauseSinksWhileReplaying: false}),
-  preventDefault: restartable(preventDefaultSinkDriver),
-  cells$,
-  state$
+  preventDefault: restartable(preventDefaultSinkDriver)
 }
 
 const {sinks, sources} = Cycle.run(app, drivers)

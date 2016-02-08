@@ -1,3 +1,5 @@
+import window from 'global/window'
+
 export function deselect () {
   let selection = ('getSelection' in window)
     ? window.getSelection()

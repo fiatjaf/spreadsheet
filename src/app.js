@@ -9,11 +9,9 @@ import {deselect} from './helpers'
 function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
 }
-
 ControlledInputHook.prototype.hook = function hook (element) {
-  if (this.injectedText !== null) {
-    element.value = this.injectedText
-  }
+  element.value = this.injectedText
+  setTimeout(() => element.focus(), 1)
 }
 
 function FocusHook () {}
@@ -36,7 +34,7 @@ function notBetween (first, second) {
 function intent (DOM) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
-  let cellBlur$ = DOM.select('.cell.editing input').events('blur')
+  let cellBlur$ = DOM.select('.sheet').events('blur')
 
   let bufferedCellClick$ = cellClick$
     .map(ev => ev.target.dataset.name)
@@ -70,15 +68,15 @@ function intent (DOM) {
   )
 
   return {
-    selectCell$: bufferedCellClick$
+    singleCellClick$: bufferedCellClick$
       .filter(names => names.length === 1)
       .map(names => names[0]),
-    editCell$: bufferedCellClick$
+    doubleCellClick$: bufferedCellClick$
       .filter(names => names.length > 1)
       .map(names => names[0]),
     cellInput$: cellInput$
       .map(ev => ev.target.value),
-    stopEdit$: cellBlur$,
+    cellBlur$: cellBlur$,
     startSelecting$: cellMouseDown$
       .map(ev => ev.target.dataset.name),
     alterSelection$: cellMouseEnter$
@@ -115,8 +113,17 @@ function intent (DOM) {
 }
 
 function modifications (actions) {
-  let selectCellMod$ = actions.selectCell$
+  let selectCellMod$ = actions.singleCellClick$
     .map(cellName => function (state, cells) {
+      if (state.editing) {
+        if (state.currentInput[0] === '=') {
+          // add clicked cell to input
+          state.currentInput = state.currentInput + cellName.toUpperCase()
+          cells.bumpCell(state.editing)
+          return {state, cells}
+        }
+      }
+
       // unmark the old selected cell
       let old = cells.getByName(state.selected)
       if (old) {
@@ -124,11 +131,11 @@ function modifications (actions) {
       }
 
       // unmark the old selected range
-      if (state.selectionRange.start) {
-        let inRange = cells.getCellsInRange(state.selectionRange)
+      if (state.areaSelect.start) {
+        let inRange = cells.getCellsInRange(state.areaSelect)
         cells.bumpCells(inRange.map(c => c.name))
         state.selecting = false
-        state.selectionRange = {}
+        state.areaSelect = {}
       }
 
       // mark the new cell
@@ -138,7 +145,7 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let markCellEditingMod$ = actions.editCell$
+  let markCellEditingMod$ = actions.doubleCellClick$
     .map(cellName => function (state, cells) {
       // unmark the old selected cell
       let old = cells.getByName(state.selected)
@@ -149,27 +156,36 @@ function modifications (actions) {
 
       // unmark the old selected range
       if (state.selecting) {
-        let cells = cells.getCellsInRange(state.selectionRange)
+        let cells = cells.getCellsInRange(state.areaSelect)
         cells.bumpCells(cells.map(c => c.name))
         state.selecting = false
-        state.selectionRange = {}
+        state.areaSelect = {}
       }
 
       // mark the new cell as editing
       let cell = cells.getByName(cellName)
       state.editing = cell.name
+      state.currentInput = cell.raw
       cells.bumpCell(cell.name)
       return {state, cells}
     })
 
   let saveCurrentInputMod$ = actions.cellInput$
     .map(val => function (state, cells) {
+      let cell = cells.getByName(state.editing)
+      cell.raw = val
       state.currentInput = val
       return {state, cells}
     })
 
-  let markNoneEditingMod$ = actions.stopEdit$
-    .map(() => function (state, cells) {
+  let markNoneEditingMod$ = actions.cellBlur$
+    .map(ev => function (state, cells) {
+      if (state.currentInput && state.currentInput[0] === '=') {
+        // don't stop editing on blur if the current cell
+        // being edited is a formula
+        return {state, cells}
+      }
+
       let cell = cells.getByName(state.editing)
 
       if (cell && cell.raw !== state.currentInput) {
@@ -185,13 +201,13 @@ function modifications (actions) {
     .map((cellName) => function (state, cells) {
       // unmark the old selected range
       if (state.selecting) {
-        let cells = cells.getCellsInRange(state.selectionRange)
+        let cells = cells.getCellsInRange(state.areaSelect)
         cells.bumpCells(cells.map(c => c.name))
       }
 
       let cell = cells.getByName(cellName)
       state.selecting = true
-      state.selectionRange = {
+      state.areaSelect = {
         start: cell,
         end: cell
       }
@@ -206,15 +222,15 @@ function modifications (actions) {
         // cancel if the mouse key was released out of the browser window
         let pressed = document.querySelectorAll('*:active')
         if (!pressed.length ||
-            pressed[pressed.length - 1].dataset.name !== state.selectionRange.start.name) {
-          state.selectionRange = {}
+            pressed[pressed.length - 1].dataset.name !== state.areaSelect.start.name) {
+          state.areaSelect = {}
           state.selecting = false
           return {state, cells}
         }
 
         // set the relevant range
         let cell = cells.getByName(cellName)
-        state.selectionRange.end = cell
+        state.areaSelect.end = cell
         cells.bumpAllCells()
       }
       return {state, cells}
@@ -273,6 +289,7 @@ function modifications (actions) {
     startSelectingMod$,
     alterSelectionMod$,
     stopSelectingMod$,
+
     moveHighlightMod$,
     setHighlightMod$,
     selectHighlightedMod$,
@@ -288,17 +305,17 @@ function preventedEvents (actions, state$) {
     .filter(ev => ev !== null)
 }
 
-export default function app ({DOM, cells$, state$}) {
+export default function app ({DOM}) {
   let actions = intent(DOM)
 
   let mod$ = modifications(actions)
     .startWith((state, cells) => ({state, cells}))
 
-  cells$ = cells$
+  let cells$ = Observable.empty()
     .share()
-    .startWith(new Grid(3, 3))
+    .startWith(new Grid(10, 30))
 
-  state$ = state$
+  let state$ = Observable.empty()
     .share()
     .startWith({areaSelect: {}})
 
@@ -309,7 +326,7 @@ export default function app ({DOM, cells$, state$}) {
     (state, cells, mod) => {
       ({state, cells} = mod(state, cells))
 
-      return h('main',
+      return h('main.sheet',
         cells.byRowColumn.map((row, i) =>
           thunk.row(i, vrender.row, state, row, cells.rowRev[i])
         )
@@ -329,7 +346,7 @@ const vrender = {
     var classes = []
     if (state.selected === cell.name) classes.push('selected')
     if (state.selecting) {
-      if (Grid.cellInRange(cell, state.selectionRange)) classes.push('range')
+      if (Grid.cellInRange(cell, state.areaSelect)) classes.push('range')
     }
 
     let cn = classes.join(' ')
@@ -349,7 +366,7 @@ const vrender = {
       }, [
         h('input', {
           value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
-          'data-hook': new FocusHook()
+          'data-hook': state.currentInput && state.currentInput !== cell.raw ? new ControlledInputHook(state.currentInput) : new FocusHook()
         })
       ])
     }
