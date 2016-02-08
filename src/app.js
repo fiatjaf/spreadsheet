@@ -42,7 +42,6 @@ function intent (DOM) {
     .share()
 
   let cellMouseDown$ = DOM.select('.cell:not(.editing)').events('mousedown')
-    .throttle(251)
   let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
   let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
 
@@ -116,6 +115,7 @@ function intent (DOM) {
 
 function modifications (actions) {
   let selectCellMod$ = actions.singleCellClick$
+    .merge(actions.startSelecting$)
     .map(cellName => function (state, cells) {
       if (state.editing) {
         if (state.currentInput[0] === '=') {
