@@ -9,6 +9,7 @@
     "cycle-restart": "0.0.9",
     "global": "^4.3.0",
     "immupdate": "^0.2.0",
+    "keycode": "^2.1.0",
     "letters": "0.0.2",
     "rx": "4.0.7",
     "vdom-thunk": "^3.0.0"
