@@ -96,15 +96,6 @@ function modifications (actions) {
   let selectCellMod$ = actions.singleCellClick$
     .merge(actions.startSelecting$)
     .map(cellName => function (state, cells) {
-      if (state.editing) {
-        if (state.currentInput[0] === '=') {
-          // add clicked cell to input
-          state.currentInput = state.currentInput + cellName.toUpperCase()
-          cells.bumpCell(state.editing)
-          return {state, cells}
-        }
-      }
-
       // unmark the old selected cell
       let old = cells.getByName(state.selected)
       if (old) {
@@ -317,6 +308,26 @@ function modifications (actions) {
 
   let stopSelectingMod$ = actions.stopSelecting$
     .map((cellName) => function (state, cells) {
+      if (state.editing && state.currentInput[0] === '=') {
+        // add selected cell (or range) to input
+        let add = state.areaSelect.start
+          ? state.areaSelect.start !== state.areaSelect.end
+            ? [state.areaSelect.start, state.areaSelect.end]
+              .sort()
+              .map(cell => cell.name)
+              .join(':')
+            : state.areaSelect.start.name
+          : state.selected
+        state.currentInput = state.currentInput + add.toUpperCase()
+        cells.bumpCell(state.editing)
+
+        // erase the selection in this special case
+        let inRange = cells.getCellsInRange(state.areaSelect)
+        cells.bumpCells(inRange.map(c => c.name))
+        state.selected = null
+        state.areaSelect = {}
+      }
+
       state.selecting = false
       return {state, cells}
     })
