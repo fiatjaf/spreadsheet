@@ -42,6 +42,7 @@ function intent (DOM) {
     .share()
 
   let cellMouseDown$ = DOM.select('.cell:not(.editing)').events('mousedown')
+    .throttle(251)
   let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
   let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
 
@@ -156,9 +157,9 @@ function modifications (actions) {
       }
 
       // unmark the old selected range
-      if (state.selecting) {
-        let cells = cells.getCellsInRange(state.areaSelect)
-        cells.bumpCells(cells.map(c => c.name))
+      if (state.areaSelect.start) {
+        let inRange = cells.getCellsInRange(state.areaSelect)
+        cells.bumpCells(inRange.map(c => c.name))
         state.selecting = false
         state.areaSelect = {}
       }
@@ -189,8 +190,15 @@ function modifications (actions) {
         return {state, cells}
       }
 
-      let cell = cells.getByName(state.editing)
+      // unmark the old selected range
+      if (state.areaSelect.start) {
+        let inRange = cells.getCellsInRange(state.areaSelect)
+        state.selecting = null
+        state.areaSelect = {}
+        cells.bumpCells(inRange.map(c => c.name))
+      }
 
+      let cell = cells.getByName(state.editing)
       if (cell && cell.raw !== state.currentInput) {
         cells.setByRowColumn(cell.row, cell.column, state.currentInput)
       }
@@ -203,9 +211,9 @@ function modifications (actions) {
   let startSelectingMod$ = actions.startSelecting$
     .map((cellName) => function (state, cells) {
       // unmark the old selected range
-      if (state.selecting) {
-        let cells = cells.getCellsInRange(state.areaSelect)
-        cells.bumpCells(cells.map(c => c.name))
+      if (state.areaSelect.start) {
+        let inRange = cells.getCellsInRange(state.areaSelect)
+        cells.bumpCells(inRange.map(c => c.name))
       }
 
       let cell = cells.getByName(cellName)
