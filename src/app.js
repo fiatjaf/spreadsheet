@@ -143,8 +143,17 @@ function modifications (actions) {
             newSelected = cells.getNextLeft(old)
             break
           case 'right':
+            newSelected = cells.getNextRight(old)
+            break
           case 'tab':
             newSelected = cells.getNextRight(old)
+            // jump to the next line if reached end of this
+            if (newSelected === old) {
+              let down = cells.getNextDown(old)
+              if (down !== old) {
+                newSelected = cells.getByRowColumn(down.row, 0)
+              }
+            }
             break
           default: return {state, cells}
         }
