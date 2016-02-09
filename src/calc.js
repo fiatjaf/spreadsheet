@@ -1,11 +1,5 @@
 import formulaParser from '../lib/formula-parser'
-
-const functions = {
-  SUM: (a, b) => a + b,
-  SUBTRACT: (a, b) => a - b,
-  MULTIPLY: (a, b) => a * b,
-  DIVIDE: (a, b) => a / b
-}
+import FORMULA from 'formulajs'
 
 export function calcFormula (cell, cells) {
   let expr = formulaParser.parse(cell.raw)
@@ -26,7 +20,7 @@ function calcExpr (expr, cell, cells) {
       })
       .map(c => getCellValue(c))
     case 'function':
-      return functions[expr.fn].apply(null,
+      return FORMULA[expr.fn].apply(null,
         expr.arguments .map(arg =>
           calcExpr(arg, cell, cells)
         )
