@@ -1,6 +1,6 @@
 import Letters from 'letters'
 
-// const regex = /(\D+)(\d+)/
+import {calcFormula} from './calc'
 
 class Grid {
   constructor (w, h) {
@@ -40,15 +40,24 @@ class Grid {
   }
 
   setByRowColumn (row, column, value) {
-    this.byRowColumn[row][column].raw = value
-    this.bumpCell(this.byRowColumn[row][column].name)
+    let cell = this.byRowColumn[row][column]
+    cell.raw = value
+    cell.calc = this.calc(cell)
+    this.bumpCell(cell.name)
   }
 
   setByName (name, value) {
     let cell = this.byName[name]
-
     this.setByRowColumn(cell.row, cell.column, value)
     this.bumpCell(name)
+  }
+
+  calc (cell) {
+    if (cell.raw.substr(0, 1) !== '=') {
+      return cell.raw
+    } else {
+      return calcFormula(cell, this)
+    }
   }
 
   getByName (name) {
