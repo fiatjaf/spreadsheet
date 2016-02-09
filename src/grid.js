@@ -1,9 +1,11 @@
 import Letters from 'letters'
 
-import {calcFormula} from './calc'
+var calc = require('./calc').default
 
 class Grid {
   constructor (w, h) {
+    this.calc = calc.bind(this)
+
     this.byName = {}
     this.byRowColumn = []
 
@@ -39,25 +41,24 @@ class Grid {
     }
   }
 
-  setByRowColumn (row, column, value) {
-    let cell = this.byRowColumn[row][column]
+  setByName (name, value) {
+    let cell = this.byName[name]
     cell.raw = value
-    cell.calc = this.calc(cell)
+    cell.calc = this.calc(cell, true)
     this.bumpCell(cell.name)
   }
 
-  setByName (name, value) {
-    let cell = this.byName[name]
-    this.setByRowColumn(cell.row, cell.column, value)
-    this.bumpCell(name)
+  setByRowColumn (row, column, value) {
+    let cell = this.byRowColumn[row][column]
+    cell.raw = value
+    cell.calc = this.calc(cell, true)
+    this.bumpCell(cell.name)
   }
 
-  calc (cell) {
-    if (cell.raw.substr(0, 1) === '=' && cell.raw.length > 1) {
-      return calcFormula(cell, this)
-    } else {
-      return cell.raw
-    }
+  recalc (name) {
+    let cell = this.byName[name]
+    cell.calc = this.calc(cell, false)
+    this.bumpCell(cell.name)
   }
 
   getByName (name) {

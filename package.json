@@ -6,6 +6,7 @@
   "dependencies": {
     "@cycle/core": "6.0.0",
     "@cycle/dom": "9.0.2",
+    "beirada": "^0.1.2",
     "cycle-restart": "0.0.9",
     "formulajs": "file:///home/fiatjaf/comp/formula.js",
     "global": "^4.3.0",

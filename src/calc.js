@@ -1,9 +1,30 @@
-import formulaParser from '../lib/formula-parser'
-import FORMULA from 'formulajs'
+import Graph from 'beirada'
+import functions from 'formulajs'
 
-export function calcFormula (cell, cells) {
-  let expr = formulaParser.parse(cell.raw)
-  return calcExpr(expr, cell, cells)
+import formulaParser from '../lib/formula-parser'
+
+const graph = new Graph()
+
+export default function calc (cell, changed) {
+  // remove all deps since the formula was changed
+  if (changed) {
+    for (let dep in graph.adj(cell.name)) {
+      graph.deldir(cell.name, dep)
+    }
+  }
+
+  // if this cell has some other depending on it,
+  // mark it to recalc
+  for (let dependent in graph.inadj(cell.name)) {
+    setTimeout(() => this.recalc(dependent), 1)
+  }
+
+  if (cell.raw.substr(0, 1) === '=' && cell.raw.length > 1) {
+    let expr = formulaParser.parse(cell.raw)
+    return calcExpr(expr, cell, this)
+  } else {
+    return cell.raw
+  }
 }
 
 function calcExpr (expr, cell, cells) {
@@ -12,15 +33,25 @@ function calcExpr (expr, cell, cells) {
     case 'string':
       return expr.value
     case 'cell':
+      // track cell dependency
+      graph.dir(cell.name, expr.name)
+
       return getCellValue(cells.getByName(expr.name))
     case 'range':
-      return cells.getCellsInRange({
+      let inRange = cells.getCellsInRange({
         start: cells.getByName(expr.start),
         end: cells.getByName(expr.end)
       })
-      .map(c => getCellValue(c))
+      var values = []
+      inRange.forEach(irc => {
+        // track cell dependency
+        graph.dir(cell.name, irc.name)
+
+        values.push(getCellValue(irc))
+      })
+      return values
     case 'function':
-      return FORMULA[expr.fn].apply(null,
+      return functions[expr.fn].apply(null,
         expr.arguments .map(arg =>
           calcExpr(arg, cell, cells)
         )

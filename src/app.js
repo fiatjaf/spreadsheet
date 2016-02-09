@@ -201,7 +201,7 @@ function modifications (actions) {
         // set the cell value and mark it as editing
         state.editing = cell.name
         state.valueBeforeEdit = cell.raw
-        cells.setByName(cell.name, character)
+        cell.raw = character
         state.currentInput = cell.raw
 
         // unselect it
@@ -381,7 +381,7 @@ export default function app ({
       try {
         ({state, cells} = mod(state, cells))
       } catch (e) {
-        console.error(e, e.stack)
+        console.error(e)
       }
 
       return h('main', [
