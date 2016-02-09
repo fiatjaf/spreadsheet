@@ -43,9 +43,9 @@ function intent (DOM, keydown$, keypress$) {
     // it will be too late.
     .do(e => {
       let keyName = keycode(e)
-      if (keyName === 'tab' || keyName === 'up' ||
-          keyName === 'down' || keyName === 'left' ||
-          keyName === 'right') {
+      if (keyName === 'tab' ||
+          keyName === 'up' ||
+          keyName === 'down') {
         e.preventDefault()
         e.stopPropagation()
       }
@@ -195,7 +195,7 @@ function modifications (actions) {
 
   let startEditingFromCharEnteredMod$ = actions.charEntered$
     .map(character => function (state, cells) {
-      if (state.selected) {
+      if (state.selected && !state.editing) {
         let cell = cells.getByName(state.selected)
 
         // set the cell value and mark it as editing
