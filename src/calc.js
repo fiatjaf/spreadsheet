@@ -18,12 +18,13 @@ function calcExpr (expr, cell, cells) {
     case 'string':
       return expr.value
     case 'cell':
-      return cells.getByName(expr.name).calc
+      return getCellValue(cells.getByName(expr.name))
     case 'range':
       return cells.getCellsInRange({
         start: cells.getByName(expr.start),
         end: cells.getByName(expr.end)
       })
+      .map(c => getCellValue(c))
     case 'function':
       return functions[expr.fn].apply(null,
         expr.arguments .map(arg =>
@@ -31,4 +32,8 @@ function calcExpr (expr, cell, cells) {
         )
       )
   }
+}
+
+function getCellValue (cell) {
+  return cell.calc || cell.raw
 }

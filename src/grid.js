@@ -53,10 +53,10 @@ class Grid {
   }
 
   calc (cell) {
-    if (cell.raw.substr(0, 1) !== '=') {
-      return cell.raw
-    } else {
+    if (cell.raw.substr(0, 1) === '=' && cell.raw.length > 1) {
       return calcFormula(cell, this)
+    } else {
+      return cell.raw
     }
   }
 

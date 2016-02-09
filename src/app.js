@@ -85,7 +85,11 @@ function intent (DOM, keydown$, keypress$) {
       .map(keycode),
     keyCommandFromInput$: editingKeydown$
       .map(keycode)
-      .filter(keyName => keyName === 'esc' || keyName === 'enter'),
+      .filter(keyName =>
+        keyName === 'esc' ||
+        keyName === 'enter' ||
+        keyName === 'tab'
+      ),
     charEntered$: keypress$
       .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode))
       .filter(character => character.trim())
@@ -238,14 +242,16 @@ function modifications (actions) {
         cells.bumpCells(inRange.map(c => c.name))
       }
 
-      cells.setByName(state.editing, state.currentInput)
-      state.editing = null
+      if (state.editing) {
+        cells.setByName(state.editing, state.currentInput)
+        state.editing = null
+      }
+
       state.currentInput = null
       return {state, cells}
     })
 
   let stopEditingFromEscapeMod$ = actions.keyCommandFromInput$
-    .filter(keyName => keyName === 'esc' || keyName === 'enter')
     .map(keyName => function (state, cells) {
       let cell = cells.getByName(state.editing)
       var next
@@ -253,6 +259,9 @@ function modifications (actions) {
       if (keyName === 'enter') {
         cells.setByName(state.editing, state.currentInput)
         next = cells.getNextDown(cell).name
+      } else if (keyName === 'tab') {
+        cells.setByName(state.editing, state.currentInput)
+        next = cells.getNextRight(cell).name
       } else if (keyName === 'esc') {
         cells.setByName(state.editing, state.valueBeforeEdit)
         next = state.editing
