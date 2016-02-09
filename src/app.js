@@ -415,7 +415,7 @@ const vrender = {
       return h('div.cell', {
         className: cn,
         dataset: cd
-      }, cell.calc || cell.raw)
+      }, cell.calc === null ? cell.raw : cell.calc)
     } else {
       return h('div.cell.editing', {
         className: cn,
