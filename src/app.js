@@ -202,6 +202,7 @@ function modifications (actions) {
         state.valueBeforeEdit = cell.raw
         cell.raw = character
         state.currentInput = cell.raw
+        cells.bumpCell(cell.name)
 
         // unselect it
         state.selected = null
