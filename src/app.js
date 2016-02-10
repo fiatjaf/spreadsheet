@@ -6,6 +6,7 @@ import document from 'global/document'
 import partial from './partial'
 import Grid from './grid'
 import {deselect} from './helpers'
+import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
 
 function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
@@ -422,6 +423,17 @@ const vrender = {
     if (state.selected === cell.name) classes.push('selected')
     if (state.selecting) {
       if (Grid.cellInRange(cell, state.areaSelect)) classes.push('range')
+    }
+    switch (cell.calc) {
+      case CALCULATING:
+        classes.push('calculating')
+        break
+      case CALCERROR:
+        classes.push('calcerror')
+        break
+      case FORMULAERROR:
+        classes.push('formulaerror')
+        break
     }
 
     let cn = classes.join(' ')

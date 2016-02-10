@@ -2,6 +2,7 @@ import Graph from 'beirada'
 import functions from 'formulajs'
 
 import formulaParser from '../lib/formula-parser'
+import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
 
 const graph = new Graph()
 
@@ -16,6 +17,8 @@ export default function calc (cell, changed) {
   // if this cell has some other depending on it,
   // mark it to recalc
   for (let dependent in graph.inadj(cell.name)) {
+    cell.calc = CALCULATING
+    this.bumpCell(cell.name)
     setTimeout(() => this.recalc(dependent), 1)
   }
 
@@ -30,11 +33,15 @@ export default function calc (cell, changed) {
         expr = formulaParser.parse(fixed)
         cell.raw = fixed
       } catch (e) {
-        cell.calc = '#ERROR'
+        cell.calc = FORMULAERROR
         return
       }
     }
-    cell.calc = calcExpr(expr, cell, this)
+    try {
+      cell.calc = calcExpr(expr, cell, this)
+    } catch (e) {
+      cell.calc = CALCERROR
+    }
   } else {
     cell.calc = cell.raw
   }
