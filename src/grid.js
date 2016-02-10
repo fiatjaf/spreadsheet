@@ -44,20 +44,20 @@ class Grid {
   setByName (name, value) {
     let cell = this.byName[name]
     cell.raw = value
-    cell.calc = this.calc(cell, true)
+    this.calc(cell, true)
     this.bumpCell(cell.name)
   }
 
   setByRowColumn (row, column, value) {
     let cell = this.byRowColumn[row][column]
     cell.raw = value
-    cell.calc = this.calc(cell, true)
+    this.calc(cell, true)
     this.bumpCell(cell.name)
   }
 
   recalc (name) {
     let cell = this.byName[name]
-    cell.calc = this.calc(cell, false)
+    this.calc(cell, false)
     this.bumpCell(cell.name)
   }
 

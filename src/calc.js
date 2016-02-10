@@ -20,10 +20,23 @@ export default function calc (cell, changed) {
   }
 
   if (cell.raw.substr(0, 1) === '=' && cell.raw.length > 1) {
-    let expr = formulaParser.parse(cell.raw)
-    return calcExpr(expr, cell, this)
+    var expr
+    try {
+      expr = formulaParser.parse(cell.raw)
+    } catch (e) {
+      // try to fix incomplete formulas
+      try {
+        let fixed = cell.raw + ')'
+        expr = formulaParser.parse(fixed)
+        cell.raw = fixed
+      } catch (e) {
+        cell.calc = '#ERROR'
+        return
+      }
+    }
+    cell.calc = calcExpr(expr, cell, this)
   } else {
-    return cell.raw
+    cell.calc = cell.raw
   }
 }
 
