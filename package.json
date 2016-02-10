@@ -23,6 +23,8 @@
     "babelify": "^7.2.0",
     "browserify": "11.0.1",
     "browserify-hmr": "^0.3.1",
+    "browserify-incremental": "^3.0.1",
+    "instant-server": "^2.0.0",
     "mkdirp": "0.5.x",
     "pegjs": "^0.9.0",
     "watchify": "^3.7.0"
@@ -31,6 +33,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "parser": "mkdirp lib && pegjs src/formula-parser.pegjs lib/formula-parser.js",
     "browserify": "mkdirp dist && browserify src/main.js -t babelify --outfile dist/main.js",
-    "live": "npm run parser && watchify -t babelify -p [ browserify-hmr -h 0.0.0.0 -u http://spooner.alhur.es:3123 ] src/main.js -o dist/main.js"
+    "hmr": "npm run parser && watchify -t babelify -p [ browserify-hmr -h 0.0.0.0 -u http://spooner.alhur.es:3123 ] src/main.js -o dist/main.js",
+    "live": "npm run parser && find src/ -type f | grep -v 'swp' | entr fish -c 'browserifyinc src/main.js -t babelify --outfile dist/main.js; and echo \"done!\"'",
+    "server": "instant -p 5000"
   }
 }
