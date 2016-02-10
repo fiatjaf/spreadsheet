@@ -21,7 +21,17 @@ InputWidget.prototype.type = 'Widget'
 InputWidget.prototype.init = function () {
   let input = document.createElement('input')
   input.value = this.value
-  setTimeout(() => input.focus(), 0)
+  setTimeout(input.focus.bind(input), 0)
+
+  /* listen for inputs and increase the size if necessary */
+  let adaptWidth = () => {
+    if (input.offsetWidth < input.scrollWidth) {
+      input.style.width = (input.scrollWidth + 2) + 'px'
+    }
+  }
+  input.addEventListener('input', adaptWidth)
+  setTimeout(adaptWidth)
+
   return input
 }
 InputWidget.prototype.update = function (prev, input) {
