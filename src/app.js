@@ -63,7 +63,7 @@ function intent (DOM, keydown$, keypress$) {
       .merge(cellUpdatedItself$)
       .map(e => e.target.value),
     cellBlur$: cellBlur$,
-    startSelecting$: cellMouseDown$
+    cellMouseDown$: cellMouseDown$
       .map(e => e.target.dataset.name),
     alterSelection$: cellMouseEnter$
       .map(e => e.target.dataset.name),
@@ -87,7 +87,7 @@ function intent (DOM, keydown$, keypress$) {
 
 function modifications (actions) {
   let selectCellMod$ = actions.singleCellClick$
-    .merge(actions.startSelecting$)
+    .merge(actions.cellMouseDown$)
     .map(cellName => function (state, cells) {
       // unmark the old selected cell
       let old = cells.getByName(state.selected)
@@ -102,6 +102,9 @@ function modifications (actions) {
         state.selecting = false
         state.areaSelect = {}
       }
+
+      // do not mark anything if we are currently editing
+      if (state.editing) return {state, cells}
 
       // mark the new cell
       let cell = cells.getByName(cellName)
@@ -266,7 +269,7 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let startSelectingMod$ = actions.startSelecting$
+  let startSelectingMod$ = actions.cellMouseDown$
     .map((cellName) => function (state, cells) {
       // unmark the old selected range
       if (state.areaSelect.start) {
@@ -323,6 +326,7 @@ function modifications (actions) {
         // erase the selection in this special case
         let inRange = cells.getCellsInRange(state.areaSelect)
         cells.bumpCells(inRange.map(c => c.name))
+        cells.bumpCell(state.selected)
         state.selected = null
         state.areaSelect = {}
       }
