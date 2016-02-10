@@ -5,25 +5,13 @@ import document from 'global/document'
 
 import partial from './partial'
 import Grid from './grid'
-import {deselect} from './helpers'
 import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
-
-function ControlledInputHook (injectedText) {
-  this.injectedText = injectedText
-}
-ControlledInputHook.prototype.hook = function hook (element) {
-  element.value = this.injectedText
-}
-
-function FocusHook () {}
-FocusHook.prototype.hook = function hook (element) {
-  deselect()
-  setTimeout(() => element.focus(), 1)
-}
+import {ControlledInputHook, InputWidget} from './vdom-utils'
 
 function intent (DOM, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
+  let cellUpdatedItself$ = DOM.select('.cell.editing input').events('raw-update')
   let topInput$ = DOM.select('.top input').events('input')
   let cellBlur$ = DOM.select('.cell.editing').events('blur')
 
@@ -72,6 +60,7 @@ function intent (DOM, keydown$, keypress$) {
       .map(names => names[0]),
     input$: cellInput$
       .merge(topInput$)
+      .merge(cellUpdatedItself$)
       .map(e => e.target.value),
     cellBlur$: cellBlur$,
     startSelecting$: cellMouseDown$
@@ -328,7 +317,7 @@ function modifications (actions) {
               .join(':')
             : state.areaSelect.start.name
           : state.selected
-        state.currentInput = state.currentInput + add.toUpperCase()
+        state.injectArgument = add.toUpperCase()
         cells.bumpCell(state.editing)
 
         // erase the selection in this special case
@@ -441,6 +430,12 @@ const vrender = {
       name: cell.name
     }
 
+    var inject
+    if (state.injectArgument) {
+      inject = state.injectArgument
+      delete state.injectArgument
+    }
+
     if (cell.name !== state.editing) {
       return h('div.cell', {
         className: cn,
@@ -451,11 +446,15 @@ const vrender = {
         className: cn,
         dataset: cd
       }, [
-        h('input', {
-          value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
-          'focus-hook': new FocusHook(),
-          'input-hook': state.currentInput !== state.valueBeforeEdit ? new ControlledInputHook(state.currentInput) : null
-        })
+        new InputWidget(
+          typeof state.currentInput === 'string' ? state.currentInput : cell.raw, /* value */
+          inject /* selected cell */
+        )
+        // h('input', {
+        //   value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
+        //   'focus-hook': new FocusHook(),
+        //   'input-hook': state.currentInput !== state.valueBeforeEdit ? new ControlledInputHook(state.currentInput) : null,
+        // })
       ])
     }
   },
