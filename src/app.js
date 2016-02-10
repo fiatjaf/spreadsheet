@@ -51,8 +51,7 @@ function intent (DOM, keydown$, keypress$) {
       }
     })
     .merge(
-      keypress$
-        .filter(e => String.fromCharCode(e.which || e.keyCode || e.charCode).trim())
+      keypress$.filter(e => (e.which || e.keyCode || e.charCode) !== 127)
     )
     // this ensures all keypresses will emit a buffer
     .buffer(() => keydown$.delay(1))
@@ -82,17 +81,17 @@ function intent (DOM, keydown$, keypress$) {
       .map(e => e.target.dataset.name),
     keyCommand$: nonCharacterKeydown$
       .filter(e => e.target.tagName !== 'INPUT')
-      .map(keycode),
+      .map(e => [keycode(e), e]),
     keyCommandFromInput$: editingKeydown$
-      .map(keycode)
-      .filter(keyName =>
+      .map(e => [keycode(e), e])
+      .filter(([keyName]) =>
         keyName === 'esc' ||
         keyName === 'enter' ||
         keyName === 'tab'
       ),
     charEntered$: keypress$
+      .filter(e => (e.which || e.keyCode || e.charCode) !== 127)
       .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode))
-      .filter(character => character.trim())
   }
 }
 
@@ -121,8 +120,8 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let moveSelection$ = actions.keyCommand$
-    .map(keyName => function (state, cells) {
+  let moveSelected$ = actions.keyCommand$
+    .map(([keyName]) => function (state, cells) {
       if (state.selected) {
         let old = cells.getByName(state.selected)
         var newSelected
@@ -252,7 +251,7 @@ function modifications (actions) {
     })
 
   let stopEditingFromEscapeMod$ = actions.keyCommandFromInput$
-    .map(keyName => function (state, cells) {
+    .map(([keyName]) => function (state, cells) {
       let cell = cells.getByName(state.editing)
       var next
 
@@ -341,9 +340,26 @@ function modifications (actions) {
       return {state, cells}
     })
 
+  let modifySelectionMod$ = actions.keyCommand$
+    .map(([keyName, e]) => function (state, cells) {
+      if (keyName === 'delete') {
+        var toErase = []
+        if (state.areaSelect.start) { /* erase cells content everywhere */
+          toErase = cells.getCellsInRange(state.areaSelect)
+        } else if (state.selected) { /* erase this cell's content */
+          toErase = [cells.getByName(state.selected)]
+        }
+        toErase.forEach(cell => {
+          if (cell.raw !== '') cells.setByName(cell.name, '')
+          else cells.bumpCell(cell.name)
+        })
+      }
+      return {state, cells}
+    })
+
   return Observable.merge(
     selectCellMod$,
-    moveSelection$,
+    moveSelected$,
     startEditingFromDoubleClickMod$,
     startEditingFromCharEnteredMod$,
     saveCurrentInputMod$,
@@ -351,7 +367,8 @@ function modifications (actions) {
     stopEditingFromEscapeMod$,
     startSelectingMod$,
     alterSelectionMod$,
-    stopSelectingMod$
+    stopSelectingMod$,
+    modifySelectionMod$
   )
 }
 
