@@ -44,7 +44,10 @@ function intent (DOM, keydown$, keypress$) {
       return keyName !== 'shift' && keyName !== 'ctrl'
     })
     .merge(
-      keypress$.filter(e => (e.which || e.keyCode || e.charCode) !== 127)
+      keypress$.filter(e => {
+        let code = (e.which || e.keyCode || e.charCode)
+        return code !== 13 && code !== 127
+      })
     )
     // this ensures all keypresses will emit a buffer
     .buffer(() => keydown$.delay(1))
@@ -84,7 +87,10 @@ function intent (DOM, keydown$, keypress$) {
         keyName === 'tab'
       ),
     charEntered$: keypress$
-      .filter(e => (e.which || e.keyCode || e.charCode) !== 127)
+      .filter(e => {
+        let code = (e.which || e.keyCode || e.charCode)
+        return code !== 13 && code !== 127
+      })
       .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode))
   }
 }
