@@ -38,6 +38,10 @@ function intent (DOM, keydown$, keypress$) {
         e.preventDefault()
         e.stopPropagation()
       }
+      if (keyName === 'backspace' && e.target.tagName !== 'INPUT') {
+        e.preventDefault()
+        e.stopPropagation()
+      }
     })
     .filter(e => {
       let keyName = keycode(e)
