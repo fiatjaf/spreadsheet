@@ -39,6 +39,10 @@ function intent (DOM, keydown$, keypress$) {
         e.stopPropagation()
       }
     })
+    .filter(e => {
+      let keyName = keycode(e)
+      return keyName !== 'shift' && keyName !== 'ctrl'
+    })
     .merge(
       keypress$.filter(e => (e.which || e.keyCode || e.charCode) !== 127)
     )
@@ -114,31 +118,51 @@ function modifications (actions) {
     })
 
   let moveSelected$ = actions.keyCommand$
-    .map(([keyName]) => function (state, cells) {
-      if (state.selected) {
+    .map(([keyName, e]) => function (state, cells) {
+      if (state.selected && !e.shiftKey) {
         let old = cells.getByName(state.selected)
         var newSelected
         switch (keyName) {
           case 'up':
             newSelected = cells.getNextUp(old)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !old.raw.trim()) {
+                let next = cells.getNextUp(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
             break
           case 'down':
+            newSelected = cells.getNextDown(old)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !old.raw.trim()) {
+                let next = cells.getNextDown(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
           case 'enter':
             newSelected = cells.getNextDown(old)
             break
           case 'left':
             newSelected = cells.getNextLeft(old)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !old.raw.trim()) {
+                let next = cells.getNextLeft(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
             break
           case 'right':
             newSelected = cells.getNextRight(old)
-            break
-          case 'tab':
-            newSelected = cells.getNextRight(old)
-            // jump to the next line if reached end of this
-            if (newSelected === old) {
-              let down = cells.getNextDown(old)
-              if (down !== old) {
-                newSelected = cells.getByRowColumn(down.row, 0)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !old.raw.trim()) {
+                let next = cells.getNextRight(newSelected)
+                if (newSelected === next) break
+                newSelected = next
               }
             }
             break
@@ -348,6 +372,64 @@ function modifications (actions) {
           if (cell.raw !== '') cells.setByName(cell.name, '')
           else cells.bumpCell(cell.name)
         })
+      } else if (e.shiftKey) {
+        // if there's not a selected area, start it now
+        if (!state.areaSelect.start && state.selected) {
+          let startAt = cells.getByName(state.selected)
+          state.areaSelect = {start: startAt, end: startAt}
+        }
+        let oldRange = cells.getCellsInRange(state.areaSelect)
+
+        var newSelected
+        switch (keyName) {
+          case 'up':
+            newSelected = cells.getNextUp(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextUp(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          case 'down':
+            newSelected = cells.getNextDown(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextDown(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          case 'left':
+            newSelected = cells.getNextLeft(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextLeft(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          case 'right':
+            newSelected = cells.getNextRight(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextRight(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          default: return {state, cells}
+        }
+        state.areaSelect.end = newSelected
+        let newRange = cells.getCellsInRange(state.areaSelect)
+
+        // now that we have updated the selected range, refresh all that may have been affected
+        cells.bumpCells(oldRange.map(c => c.name))
+        cells.bumpCells(newRange.map(c => c.name))
       }
       return {state, cells}
     })
@@ -414,7 +496,7 @@ const vrender = {
   cell: function (state, cell) {
     var classes = []
     if (state.selected === cell.name) classes.push('selected')
-    if (state.selecting) {
+    if (state.areaSelect.start) {
       if (Grid.cellInRange(cell, state.areaSelect)) classes.push('range')
     }
     switch (cell.calc) {
