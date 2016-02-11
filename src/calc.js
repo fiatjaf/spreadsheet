@@ -2,6 +2,7 @@ import Graph from 'beirada'
 import functions from 'formulajs'
 
 import formulaParser from '../lib/formula-parser'
+import {renderParsedFormula} from './helpers'
 import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
 
 const graph = new Graph()
@@ -26,16 +27,15 @@ export default function calc (cell, changed) {
     var expr
     try {
       expr = formulaParser.parse(cell.raw)
-    } catch (e) {
-      // try to fix incomplete formulas
-      try {
-        let fixed = cell.raw + ')'
-        expr = formulaParser.parse(fixed)
-        cell.raw = fixed
-      } catch (e) {
-        cell.calc = FORMULAERROR
-        return
+      if (!expr) {
+        // expr === null when raw is '='
+        cell.raw = ''
+        cell.calc = ''
       }
+      cell.raw = renderParsedFormula(expr)
+    } catch (e) {
+      cell.calc = FORMULAERROR
+      return
     }
     try {
       cell.calc = calcExpr(expr, cell, this)
@@ -72,7 +72,9 @@ function calcExpr (expr, cell, cells) {
       return values
     case 'function':
       return functions[expr.fn].apply(null,
-        expr.arguments .map(arg =>
+        expr.arguments
+        .filter(arg => arg.type !== 'empty')
+        .map(arg =>
           calcExpr(arg, cell, cells)
         )
       )

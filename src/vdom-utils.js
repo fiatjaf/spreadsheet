@@ -1,4 +1,5 @@
 import {deselect} from './helpers'
+import formulaParser from '../lib/formula-parser'
 
 export function ControlledInputHook (injectedText) {
   this.injectedText = injectedText
@@ -36,20 +37,50 @@ InputWidget.prototype.init = function () {
 }
 InputWidget.prototype.update = function (prev, input) {
   if (this.injected) {
+    // this is all for injecting an argument
+
     let isModernBrowser = ('selectionStart' in input &&
                            'selectionEnd' in input)
-    var strPos
+
+    // get the cursor position
+    var caretPos
     if (isModernBrowser) {
-      strPos = input.selectionStart
+      caretPos = input.selectionStart
     } else {
       input.focus()
       let range = document.selection.createRange()
       range.moveStart('character', -input.value.length)
-      strPos = range.text.length
+      caretPos = range.text.length
     }
 
-    let before = (input.value).substring(0, strPos)
-    let after = (input.value).substring(strPos, input.value.length)
+    // we assume we are in a formula (starting with "=")
+    var expr
+    try {
+      expr = formulaParser.parse(input.value)
+    } catch (e) {
+      console.log(input.value)
+      console.log(e)
+      return
+    }
+
+    var start, end
+
+    // if expr is null, that means there's only a "="
+    if (!expr) {
+      start = 1
+      end = 1
+    } else {
+      // we search for the arguments in this formula and nested formulas
+      // for a word under our cursor
+      let found = searchForOperative(expr, caretPos)
+      if (!found) {
+        return
+      }
+      [start, end] = found
+    }
+
+    let before = (input.value).slice(0, start)
+    let after = (input.value).slice(end)
     input.value = before + this.injected + after
 
     // emit an event so the app can listen to and update itself
@@ -57,16 +88,31 @@ InputWidget.prototype.update = function (prev, input) {
     event.initEvent('raw-update', true, true)
     input.dispatchEvent(event)
 
-    // set the cursor to the right position
+    // set the cursor to the right position (after the inserted argument)
     if (isModernBrowser) {
-      input.selectionStart = strPos + this.injected.length
-      input.selectionEnd = strPos + this.injected.length
+      input.selectionStart = start + this.injected.length
+      input.selectionEnd = start + this.injected.length
     } else {
       let range = document.selection.createRange()
-      range.moveStart('character', strPos)
-      range.moveEnd('character', 0)
+      range.moveStart('character', start)
+      range.moveEnd('character', end)
       range.select()
     }
     input.focus()
+  }
+}
+
+function searchForOperative (expr, caret) {
+  if (expr.type === 'function') {
+    for (let i = 0; i < expr.arguments.length; i++) {
+      let result = searchForOperative(expr.arguments[i], caret)
+      if (result) {
+        return result
+      }
+    }
+  }
+  // not a function, so it is a the raw operative (string, int, cell, range)
+  if (expr.pos[0] <= caret && caret <= expr.pos[1]) {
+    return expr.pos
   }
 }

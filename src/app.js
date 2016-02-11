@@ -65,9 +65,9 @@ function intent (DOM, keydown$, keypress$) {
     cellBlur$: cellBlur$,
     cellMouseDown$: cellMouseDown$
       .map(e => e.target.dataset.name),
-    alterSelection$: cellMouseEnter$
+    cellMouseEnter$: cellMouseEnter$
       .map(e => e.target.dataset.name),
-    stopSelecting$: cellMouseUp$
+    cellMouseUp$: cellMouseUp$
       .map(e => e.target.dataset.name),
     keyCommand$: nonCharacterKeydown$
       .filter(e => e.target.tagName !== 'INPUT')
@@ -288,7 +288,7 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let alterSelectionMod$ = actions.alterSelection$
+  let alterSelectionMod$ = actions.cellMouseEnter$
     .map((cellName) => function (state, cells) {
       if (state.selecting) {
         // cancel if the mouse key was released out of the browser window
@@ -308,7 +308,7 @@ function modifications (actions) {
       return {state, cells}
     })
 
-  let stopSelectingMod$ = actions.stopSelecting$
+  let stopSelectingMod$ = actions.cellMouseUp$
     .map((cellName) => function (state, cells) {
       if (state.editing && state.currentInput[0] === '=') {
         // add selected cell (or range) to input
@@ -326,7 +326,7 @@ function modifications (actions) {
         // erase the selection in this special case
         let inRange = cells.getCellsInRange(state.areaSelect)
         cells.bumpCells(inRange.map(c => c.name))
-        cells.bumpCell(state.selected)
+        if (state.selected) cells.bumpCell(state.selected)
         state.selected = null
         state.areaSelect = {}
       }
@@ -393,7 +393,7 @@ export default function app ({
       try {
         ({state, cells} = mod(state, cells))
       } catch (e) {
-        console.error(e)
+        console.error(e.stack)
       }
 
       return h('main', [
@@ -434,18 +434,18 @@ const vrender = {
       name: cell.name
     }
 
-    var inject
-    if (state.injectArgument) {
-      inject = state.injectArgument
-      delete state.injectArgument
-    }
-
     if (cell.name !== state.editing) {
       return h('div.cell', {
         className: cn,
         dataset: cd
       }, cell.calc === null ? cell.raw : cell.calc)
     } else {
+      var inject
+      if (state.injectArgument) {
+        inject = state.injectArgument
+        delete state.injectArgument
+      }
+
       return h('div.cell.editing', {
         className: cn,
         dataset: cd

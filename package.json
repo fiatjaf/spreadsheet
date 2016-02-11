@@ -24,13 +24,15 @@
     "browserify": "11.0.1",
     "browserify-hmr": "^0.3.1",
     "browserify-incremental": "^3.0.1",
+    "chai": "^3.5.0",
     "instant-server": "^2.0.0",
     "mkdirp": "0.5.x",
+    "mocha": "^2.4.5",
     "pegjs": "^0.9.0",
     "watchify": "^3.7.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha --compilers js:babel-core/register",
     "parser": "mkdirp lib && pegjs src/formula-parser.pegjs lib/formula-parser.js",
     "browserify": "mkdirp dist && browserify src/main.js -t babelify --outfile dist/main.js",
     "hmr": "npm run parser && watchify -t babelify -p [ browserify-hmr -h 0.0.0.0 -u http://spooner.alhur.es:3123 ] src/main.js -o dist/main.js",
