@@ -8,7 +8,7 @@ import Grid from './grid'
 import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
 import {ControlledInputHook, InputWidget} from './vdom-utils'
 
-function intent (DOM, keydown$, keypress$) {
+function intent (DOM, COPYPASTE, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
   let cellUpdatedItself$ = DOM.select('.cell.editing input').events('raw-update')
@@ -95,7 +95,9 @@ function intent (DOM, keydown$, keypress$) {
         let code = (e.which || e.keyCode || e.charCode)
         return code !== 13 && code !== 127
       })
-      .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode))
+      .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode)),
+    afterPaste$: COPYPASTE.pasted$
+      .map(input => input.split('\n').map(line => line.split('\t')))
   }
 }
 
@@ -444,6 +446,42 @@ function modifications (actions) {
       return {state, cells}
     })
 
+  let getPastedValuesMod$ = actions.afterPaste$
+    .map(rows => function (state, cells) {
+      // determine where will the paste start
+      var startAt
+      if (state.areaSelect.start) {
+        startAt = cells.getByRowColumn(
+          Math.min(state.areaSelect.start.row, state.areaSelect.end.row),
+          Math.min(state.areaSelect.start.column, state.areaSelect.end.column)
+        )
+      } else if (state.selected) {
+        startAt = cells.getByName(state.selected)
+      } else {
+        return {state, cells}
+      }
+
+      var cellBeingUpdated = startAt
+      var currentRow = startAt
+      var next
+      for (let r = 0; r < rows.length; r++) {
+        let row = rows[r]
+        for (let v = 0; v < row.length; v++) {
+          let value = row[v]
+          cells.setByName(cellBeingUpdated.name, value)
+          next = cells.getNextRight(cellBeingUpdated)
+          if (cellBeingUpdated === next) break
+          cellBeingUpdated = next
+        }
+        next = cells.getNextDown(currentRow)
+        if (currentRow === next) break
+        currentRow = next
+        cellBeingUpdated = next
+      }
+
+      return {state, cells}
+    })
+
   return Observable.merge(
     selectCellMod$,
     moveSelected$,
@@ -455,16 +493,18 @@ function modifications (actions) {
     startSelectingMod$,
     alterSelectionMod$,
     stopSelectingMod$,
-    modifySelectionMod$
+    modifySelectionMod$,
+    getPastedValuesMod$
   )
 }
 
 export default function app ({
   DOM,
+  COPYPASTE,
   keydown: keydown$,
   keypress: keypress$
 }) {
-  let actions = intent(DOM, keydown$, keypress$)
+  let actions = intent(DOM, COPYPASTE, keydown$, keypress$)
 
   let mod$ = modifications(actions)
     .startWith((state, cells) => ({state, cells}))
@@ -476,6 +516,51 @@ export default function app ({
   let state$ = Observable.empty()
     .share()
     .startWith({areaSelect: {}})
+
+  let valuesToCopy$ = Observable.combineLatest(
+    state$,
+    cells$,
+    COPYPASTE.copying$,
+    (state, cells) => {
+      // determine where will the copy start
+      var startAt
+      var endAt
+      if (state.areaSelect.start) {
+        startAt = cells.getByRowColumn(
+          Math.min(state.areaSelect.start.row, state.areaSelect.end.row),
+          Math.min(state.areaSelect.start.column, state.areaSelect.end.column)
+        )
+        endAt = cells.getByRowColumn(
+          Math.max(state.areaSelect.start.row, state.areaSelect.end.row),
+          Math.max(state.areaSelect.start.column, state.areaSelect.end.column)
+        )
+      } else if (state.selected) {
+        startAt = cells.getByName(state.selected)
+        endAt = startAt
+      } else {
+        return ''
+      }
+
+      var rawRows = []
+      var calcRows = []
+      for (let r = startAt.row; r <= endAt.row; r++) {
+        var rawRow = []
+        var calcRow = []
+        for (let c = startAt.column; c <= endAt.column; c++) {
+          let cell = cells.getByRowColumn(r, c)
+          rawRow.push(cell.raw)
+          calcRow.push(cell.calc)
+        }
+        rawRows.push(rawRow.join('\t'))
+        calcRows.push(calcRow.join('\t'))
+      }
+
+      return {
+        raw: rawRows.join('\n'),
+        calc: calcRows.join('\n')
+      }
+    }
+  )
 
   let vtree$ = Observable.combineLatest(
     state$,
@@ -498,7 +583,8 @@ export default function app ({
   )
 
   return {
-    DOM: vtree$
+    DOM: vtree$,
+    COPYPASTE: valuesToCopy$
   }
 }
 
@@ -546,11 +632,6 @@ const vrender = {
           typeof state.currentInput === 'string' ? state.currentInput : cell.raw, /* value */
           inject /* selected cell */
         )
-        // h('input', {
-        //   value: typeof state.currentInput === 'string' ? state.currentInput : cell.raw,
-        //   'focus-hook': new FocusHook(),
-        //   'input-hook': state.currentInput !== state.valueBeforeEdit ? new ControlledInputHook(state.currentInput) : null,
-        // })
       ])
     }
   },

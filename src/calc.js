@@ -53,10 +53,8 @@ function calcExpr (expr, cell, cells) {
     case 'string':
       return expr.value
     case 'cell':
-      // track cell dependency
-      graph.dir(cell.name, expr.name)
-
-      return getCellValue(cells.getByName(expr.name))
+      graph.dir(cell.name, expr.name) /* track cell dependency */
+      return cells.getByName(expr.name).calc
     case 'range':
       let inRange = cells.getCellsInRange({
         start: cells.getByName(expr.start),
@@ -64,23 +62,15 @@ function calcExpr (expr, cell, cells) {
       })
       var values = []
       inRange.forEach(irc => {
-        // track cell dependency
-        graph.dir(cell.name, irc.name)
-
-        values.push(getCellValue(irc))
+        graph.dir(cell.name, irc.name) /* track cell dependency */
+        values.push(irc.calc)
       })
       return values
     case 'function':
       return functions[expr.fn].apply(null,
         expr.arguments
         .filter(arg => arg.type !== 'empty')
-        .map(arg =>
-          calcExpr(arg, cell, cells)
-        )
+        .map(arg => calcExpr(arg, cell, cells))
       )
   }
-}
-
-function getCellValue (cell) {
-  return cell.calc || cell.raw
 }
