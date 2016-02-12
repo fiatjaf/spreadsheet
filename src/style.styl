@@ -1,37 +1,46 @@
 *
   box-sizing border-box
 
+div.top
+  padding 1px
+
+  input
+    width 100%
+
+div.sheet
+  display inline-block
+  margin-top 4px
+
 div.row
   -webkit-user-select: none;
   -moz-user-select: none;
 
   clear both
-  width auto
-  overflow auto
+  width 100%
+  overflow hidden
+  white-space nowrap
 
   div.cell
-    float left
+    display inline-block
+    white-space normal
     height 1.5em
     font-size 1.2em
     padding 2px 0.2em 0 0.2em
     width 4em
-    margin 1px
+    margin 0 1px
 
     &:first-child
       clear both
 
     border 1px solid blue
-
-    &:not(.editing)
-      overflow hidden
+    overflow hidden
 
     &.editing
       padding 0
 
       input
         padding 2px 0.2em 0 0.2em
-        background-color greenyellow
-        display block
+        background-color rgba(245, 119, 38, 0.3)
         width 100%
         height inherit
         border none
