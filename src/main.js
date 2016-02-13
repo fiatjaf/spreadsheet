@@ -4,6 +4,7 @@ import {makeDOMDriver} from '@cycle/dom'
 import {restart, restartable} from 'cycle-restart'
 
 const makeCopyPasteDriver = require('./copy-paste-driver')
+const makeInjectCellDriver = require('./inject-cell-driver')
 var app = require('./app').default
 
 let keydown$ = Rx.Observable.fromEvent(document, 'keydown')
@@ -12,6 +13,7 @@ let keypress$ = Rx.Observable.fromEvent(document, 'keypress')
 const drivers = {
   DOM: restartable(makeDOMDriver('#container'), {pauseSinksWhileReplaying: false}),
   COPYPASTE: makeCopyPasteDriver(),
+  INJECT: makeInjectCellDriver(),
   keydown: () => keydown$.share(),
   keypress: () => keypress$.share()
 }
