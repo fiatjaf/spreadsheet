@@ -1,9 +1,8 @@
 import {Observable} from 'rx'
-import {h} from '@cycle/dom'
 import keycode from 'keycode'
 
 import Grid from './grid'
-import {thunk, vrender} from './vrender'
+import {vrender} from './vrender'
 
 function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
@@ -578,14 +577,7 @@ export default function app ({
     )
 
   let vtree$ = signal$
-    .map(({state, cells}) =>
-      h('main', [
-        thunk.top('__top__', vrender.top, state, cells),
-        h('div.sheet', cells.byRowColumn.map((row, i) =>
-          thunk.row(i, vrender.row, state, row, cells.rowRev[i])
-        ))
-      ])
-    )
+    .map(({state, cells}) => vrender.main(state, cells))
 
   return {
     DOM: vtree$,
