@@ -5,14 +5,12 @@ import partial from './partial'
 import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
 import {deselect} from './helpers'
 
-function ControlledInputHook (text) {
-  this.text = text
-}
-ControlledInputHook.prototype.hook = function hook (element) {
+function ValueHook (text) { this.text = text }
+ValueHook.prototype.hook = function hook (element) {
   element.value = this.text
 }
 
-export function FocusHook () {}
+function FocusHook () {}
 FocusHook.prototype.hook = function hook (element) {
   deselect()
   setTimeout(() => element.focus(), 1)
@@ -21,7 +19,7 @@ FocusHook.prototype.hook = function hook (element) {
 export const vrender = {
   main: function (state, cells) {
     return h('main', [
-      thunk.top('__top__', vrender.top, state, cells),
+      vrender.top(state, cells),
       h('div.sheet', cells.byRowColumn.map((row, i) =>
         thunk.row(i, vrender.row, state, row, cells.rowRev[i])
       ))
@@ -30,9 +28,9 @@ export const vrender = {
   top: function (state, cells) {
     let selected = cells.getByName(state.selected)
     let value = state.currentInput || selected && selected.raw || ''
-    return h('div.top', [
+    return h('div.top', {className: state.editingTop ? 'editing' : ''}, [
       h('input', {
-        'input-hook': new ControlledInputHook(value)
+        'input-hook': state.editingTop ? null : new ValueHook(value)
       })
     ])
   },
@@ -70,12 +68,15 @@ export const vrender = {
         dataset: cd
       }, cell.calc === null ? cell.raw : cell.calc)
     } else {
+      let raw = state.currentInput || cell.raw
+
       return h('div.cell.editing', {
         className: cn,
         dataset: cd
       }, h('input', {
-        value: cell.raw,
-        'focus-hook': new FocusHook()
+        value: raw,
+        'focus-hook': !state.editingTop ? new FocusHook() : null,
+        'value-hook': !state.editingTop ? null : new ValueHook(raw)
       }))
     }
   }
@@ -84,9 +85,6 @@ export const vrender = {
 export const thunk = {
   top: partial(function ([currState], [nextState]) {
     return false
-    // return currState.selected === nextState.selected &&
-    //   currState.editing === nextState.editing &&
-    //   currState.currentInput === nextState.currentInput
   }),
   row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {
     return currRowRev === nextRowRev

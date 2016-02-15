@@ -7,13 +7,16 @@ import {vrender} from './vrender'
 function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
   let cellInput$ = DOM.select('.cell.editing input').events('input')
-  let topInput$ = DOM.select('.top input').events('input')
   let cellBlur$ = DOM.select('.cell.editing').events('blur')
 
   let bufferedCellClick$ = cellClick$
     .map(e => e.target.dataset.name)
     .buffer(() => cellClick$.debounce(250))
     .share()
+
+  let topInput$ = DOM.select('.top input').events('input')
+  let topClick$ = DOM.select('.top input').events('click')
+  let topBlur$ = DOM.select('.top input').events('blur')
 
   let cellMouseDown$ = DOM.select('.cell:not(.editing)').events('mousedown')
   let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
@@ -64,11 +67,14 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     doubleCellClick$: bufferedCellClick$
       .filter(names => names.length > 1)
       .map(names => names[0]),
+    topClick$,
+    topBlur$,
+    topInput$: topInput$
+      .map(e => e.target.value),
     input$: cellInput$
-      .merge(topInput$)
-      .map(e => e.target.value)
-      .merge(INJECT.updated$),
-    cellBlur$: cellBlur$,
+      .map(e => e.target.value),
+    injected$: INJECT.updated$,
+    cellBlur$,
     cellMouseDown$: cellMouseDown$
       .map(e => e.target.dataset.name),
     cellMouseEnter$: cellMouseEnter$
@@ -211,6 +217,7 @@ function modifications (actions) {
         // mark the new cell as editing
         let cell = cells.getByName(cellName)
         state.editing = cell.name
+        state.editingTop = false
         state.valueBeforeEdit = cell.raw
         state.currentInput = cell.raw
         cells.bumpCell(cell.name)
@@ -224,6 +231,7 @@ function modifications (actions) {
 
           // set the cell value and mark it as editing
           state.editing = cell.name
+          state.editingTop = false
           state.valueBeforeEdit = cell.raw
           cell.raw = character
           state.currentInput = cell.raw
@@ -244,14 +252,54 @@ function modifications (actions) {
         return {state, cells}
       }),
 
+    actions.topClick$
+      .map(() => function (state, cells) {
+        if (!state.selected) state.selected = state.editing || 'a1'
+
+        let cell = cells.getByName(state.selected)
+
+        // set the cell value and mark it as editing
+        state.editing = cell.name
+        state.editingTop = true // editing at the top
+
+        state.valueBeforeEdit = cell.raw
+        state.currentInput = cell.raw
+        cells.bumpCell(cell.name)
+
+        // unselect it
+        state.selected = null
+
+        // unmark the old selected range
+        if (state.areaSelect.start) {
+          let inRange = cells.getCellsInRange(state.areaSelect)
+          cells.bumpCells(inRange.map(c => c.name))
+          state.selecting = false
+          state.areaSelect = {}
+        }
+
+        return {state, cells}
+      }),
+
     actions.input$
+      .merge(actions.topInput$)
+      .merge(actions.injected$)
       .map(val => function saveCurrentInputMod (state, cells) {
         state.currentInput = val
         cells.getByName(state.editing).raw = val
         return {state, cells}
       }),
 
+    actions.topInput$
+      .merge(actions.injected$)
+      .map(val => function updateCellWhenEditingTopMod (state, cells) {
+        // this happens in addition to saveCurrentInputMod,
+        // so we don't have to repeat what is done there.
+        if (state.editingTop) cells.bumpCell(state.editing)
+        return {state, cells}
+      }),
+
     actions.cellBlur$
+      .merge(actions.topBlur$)
       .map(e => function stopEditingFromBlur (state, cells) {
         if (state.currentInput && state.currentInput[0] === '=') {
           // don't stop editing on blur if the current cell
@@ -270,6 +318,7 @@ function modifications (actions) {
         if (state.editing) {
           cells.setByName(state.editing, state.currentInput)
           state.editing = null
+          state.editingTop = false
         }
 
         state.currentInput = null
