@@ -2,21 +2,28 @@ formula
   = "=" expr:expr? { return expr || null }
   
 expr
-  = _ e1:operative? _ op:operator _ e2:expr? _ {
-    e1 = e1 || 0
-  
-    if (e2) {
-      return {
-        type: 'function',
-        fn: op,
-        operator: true,
-        arguments: [e1, e2]
-      }
-    } else {
-      return e1
+  = _ e1:operativeOrNothing? _ op:operator _ e2:expr? _ {
+    return {
+      type: 'function',
+      fn: op,
+      operator: true,
+      arguments: [e1, e2]
     }
   }
-  / _ o:operative _ { return o }
+  / operativeOrNothing
+
+operativeOrNothing
+  = _ o:operative _ { return o }
+  / empty
+
+empty
+  = _ {
+    var loc = location()
+    return {
+      type: 'empty',
+      pos: [loc.start.offset, loc.end.offset]
+    }
+  }
   
 operative
   = r:range {
@@ -41,7 +48,7 @@ operative
     return {type: 'string', value: s, pos: [loc.start.offset, loc.end.offset]}
   }
   / fn
-  / "(" _ o:operative _ ")" { return o }
+  / "(" o:operativeOrNothing ")" { return o }
 
 operator
   = '+' { return 'SUM' }
