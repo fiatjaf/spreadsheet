@@ -12,6 +12,7 @@ function makeCopyPasteDriver () {
     values$
       .subscribe(({raw, calc}) => {
         var elem = document.createElement('textarea')
+        elem.className = 'copy-paste'
         elem.id = 'copy-paste'
         elem.value = calc
         document.body.appendChild(elem)

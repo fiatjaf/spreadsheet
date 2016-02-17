@@ -8,12 +8,26 @@
     "@cycle/dom": "9.0.2",
     "beirada": "^0.1.2",
     "cycle-restart": "0.0.9",
-    "formulajs": "file:///home/fiatjaf/comp/formula.js",
-    "immupdate": "^0.2.0",
+    "formulajs": "fiatjaf/formula.js",
     "keycode": "^2.1.0",
     "letters": "0.0.2",
+    "pegjs": "^0.9.0",
     "rx": "4.0.7",
+    "stylus": "^0.53.0",
     "vdom-thunk": "^3.0.0"
+  },
+  "browserify": {
+    "transform": [
+      "babelify"
+    ]
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ],
+    "plugins": [
+      "transform-object-assign"
+    ]
   },
   "devDependencies": {
     "babel-core": "^6.4.5",
@@ -32,6 +46,8 @@
   },
   "scripts": {
     "test": "mocha --compilers js:babel-core/register",
+    "install": "npm run parser && npm run browserify && npm run style",
+    "style": "stylus src/style.styl -o dist/style.css",
     "parser": "mkdirp lib && pegjs src/formula-parser.pegjs lib/formula-parser.js",
     "browserify": "mkdirp dist && browserify src/main.js -t babelify --outfile dist/main.js",
     "hmr": "npm run parser && watchify -t babelify -p [ browserify-hmr -h 0.0.0.0 -u http://spooner.alhur.es:3123 ] src/main.js -o dist/main.js",

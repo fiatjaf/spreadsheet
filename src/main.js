@@ -12,7 +12,7 @@ let keydown$ = Rx.Observable.fromEvent(document, 'keydown')
 let keypress$ = Rx.Observable.fromEvent(document, 'keypress')
 
 const drivers = {
-  DOM: restartable(makeDOMDriver('#container'), {pauseSinksWhileReplaying: false}),
+  DOM: restartable(makeDOMDriver('#spreadsheet'), {pauseSinksWhileReplaying: false}),
   COPYPASTE: makeCopyPasteDriver(),
   INJECT: makeInjectCellDriver(),
   CELLS: makeCellsDriver(10, 10),
