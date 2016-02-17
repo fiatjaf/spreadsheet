@@ -3,6 +3,7 @@ import Cycle from '@cycle/core'
 import {makeDOMDriver} from '@cycle/dom'
 import {restart, restartable} from 'cycle-restart'
 
+const makeCellsDriver = require('./cells-driver')
 const makeCopyPasteDriver = require('./copy-paste-driver')
 const makeInjectCellDriver = require('./inject-cell-driver')
 var app = require('./app').default
@@ -14,6 +15,7 @@ const drivers = {
   DOM: restartable(makeDOMDriver('#container'), {pauseSinksWhileReplaying: false}),
   COPYPASTE: makeCopyPasteDriver(),
   INJECT: makeInjectCellDriver(),
+  CELLS: makeCellsDriver(10, 10),
   keydown: () => keydown$.share(),
   keypress: () => keypress$.share()
 }

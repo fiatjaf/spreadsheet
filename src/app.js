@@ -532,21 +532,17 @@ export default function app ({
   DOM,
   COPYPASTE,
   INJECT,
+  CELLS: cells$ = Observable.just(new Grid(6, 6)).shareReplay(1),
   keydown: keydown$,
-  keypress: keypress$
+  keypress: keypress$,
+  state: state$ = Observable.just({areaSelect: {}})
 }) {
   let actions = intent(DOM, COPYPASTE, INJECT, keydown$, keypress$)
 
   let mod$ = modifications(actions)
     .startWith((state, cells) => ({state, cells}))
 
-  let cells$ = Observable.empty()
-    .share()
-    .startWith(new Grid(10, 30))
-
-  let state$ = Observable.empty()
-    .share()
-    .startWith({areaSelect: {}})
+  state$ = state$.shareReplay(1)
 
   let signal$ = Observable.combineLatest(
     state$,
