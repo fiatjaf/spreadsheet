@@ -1,72 +1,84 @@
-*
-  box-sizing border-box
-
-div.top
-  padding 1px
-
-  input
-    width 100%
-
-div.sheet
-  display inline-block
-  margin-top 4px
-
-div.row
-  -webkit-user-select: none;
-  -moz-user-select: none;
-
-  clear both
-  width 100%
-  overflow hidden
-  white-space nowrap
-
-  div.cell
+#spreadsheet
+  *
+    box-sizing border-box
+  
+  div.top
+    padding 1px
+  
+    input
+      width 100%
+  
+  div.sheet
     display inline-block
-    white-space normal
-    height 1.5em
-    font-size 1.2em
-    padding 2px 0.2em 0 0.2em
-    width 4em
-    margin 0 1px
-
-    &:first-child
-      clear both
-
-    border 1px solid blue
+    margin-top 4px
+  
+  div.row
+    -webkit-user-select: none;
+    -moz-user-select: none;
+  
+    display table-row
+    clear both
+    width 100%
     overflow hidden
+    white-space nowrap
 
-    &.editing
-      padding 0
+    &:last-child .cell
+      border-bottom-width 1px
+  
+    div.cell
+      display table-cell
+      white-space normal
+      height 1.5em
+      font-size 1.2em
+      padding 2px 0.2em 0 0.2em
+      overflow hidden
+      width 4em
+  
+      &:first-child
+        clear both
+  
+      border solid #438EC3
+      border-width 1px 1px 0 0
 
-      input
-        padding 2px 0.2em 0 0.2em
-        background-color rgba(245, 119, 38, 0.3)
-        width 100%
-        height inherit
-        border none
-        outline none
-        display block
+      &:first-child
+        border-left-width 1px
+  
+      &.editing
+        padding 0
+  
+        input
+          padding 2px 0.2em 0 0.2em
+          background-color rgba(245, 119, 38, 0.3)
+          width inherit
+          height inherit
+          border none
+          outline none
+          display block
+          position absolute
+  
+      &.selected
+        border-color pink
+        border-width 1px
         position relative
-
-    &.selected
-      border-color pink
-
-    &.range
-      background-color: rgba(100, 100, 100, 0.2)
-
-    &.formulaerror
-      background-color: #EBD4A1
-    &.calcerror
-      background-color: #FFACAC
-    &.calculating
-      background-color: #A1CAEB
-
-#copy-paste
-  display block
-  position absolute
-  right 0
-  bottom 0
-  width 1px
-  height 1px
-  z-index 18
-  overflow hidden
+        left -1px
+        bottom -1px
+  
+      &.range
+        background-color: rgba(100, 100, 100, 0.2)
+  
+      &.formulaerror
+        background-color: #EBD4A1
+      &.calcerror
+        background-color: #FFACAC
+      &.calculating
+        background-color: #A1CAEB
+  
+  .copy-paste
+    display block
+    position absolute
+    right 0
+    bottom 0
+    width 1px
+    height 1px
+    z-index 18
+    overflow hidden
