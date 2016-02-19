@@ -627,6 +627,9 @@ export default function app ({
   return {
     DOM: vtree$,
     COPYPASTE: valuesToCopy$,
-    INJECT: inject$
+    INJECT: inject$,
+    ADAPTWIDTH: DOM.select('.cell.editing input').observable
+      .filter(inputs => inputs.length)
+      .map(inputs => inputs[0])
   }
 }

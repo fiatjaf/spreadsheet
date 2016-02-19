@@ -6,6 +6,7 @@ import {restart, restartable} from 'cycle-restart'
 const makeCellsDriver = require('./cells-driver')
 const makeCopyPasteDriver = require('./copy-paste-driver')
 const makeInjectCellDriver = require('./inject-cell-driver')
+const makeAdaptWidthDriver = require('./adapt-width-driver')
 var app = require('./app').default
 
 let keydown$ = Rx.Observable.fromEvent(document, 'keydown')
@@ -16,6 +17,7 @@ const drivers = {
   COPYPASTE: makeCopyPasteDriver(),
   INJECT: makeInjectCellDriver(),
   CELLS: makeCellsDriver(10, 10),
+  ADAPTWIDTH: makeAdaptWidthDriver(),
   keydown: () => keydown$.share(),
   keypress: () => keypress$.share()
 }
