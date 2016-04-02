@@ -188,6 +188,15 @@ function modifications (actions) {
                 }
               }
               break
+            case 'tab':
+              newSelected = cells.getNextRight(old)
+              if (newSelected === old) {
+                let lineDown = cells.getNextDown(old)
+                if (lineDown !== old) {
+                  newSelected = cells.getByRowColumn(lineDown.row, 0)
+                }
+              }
+              break
             default: return {state, cells}
           }
           state.selected = newSelected.name
