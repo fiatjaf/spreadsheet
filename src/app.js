@@ -85,7 +85,8 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
       .map(e => e.target.dataset.name),
     cellMouseUp$: cellMouseUp$
       .map(e => e.target.dataset.name),
-    keyCommandNotFromInput$: keyCommand$,
+    modifySelection$: keyCommand$
+      .filter(([_, e]) => e.shiftKey),
     keyCommandFromInput$: editingKeydown$
       .map(e => [keycode(e), e])
       .filter(([keyName]) =>
@@ -93,6 +94,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
         keyName === 'enter' ||
         keyName === 'tab'
       ),
+    keyCommandNotFromInput$: keyCommand$,
     eraseSelection$: Rx.Observable.merge(
       keyCommand$.filter(([keyName, _]) => keyName === 'delete'),
       COPYPASTE.cutting$
@@ -437,67 +439,66 @@ function modifications (actions) {
       })
       .delay(1),
 
-    actions.keyCommandNotFromInput$
+    actions.modifySelection$
       .map(([keyName, e]) => function modifySelectionMod (state, cells) {
-        if (e.shiftKey) {
-          // if there's not a selected area, start it now
-          if (!state.areaSelect.start && state.selected) {
-            let startAt = cells.getByName(state.selected)
-            state.areaSelect = {start: startAt, end: startAt}
-          }
-          let oldRange = cells.getCellsInRange(state.areaSelect)
-
-          var newSelected
-          switch (keyName) {
-            case 'up':
-              newSelected = cells.getNextUp(state.areaSelect.end)
-              if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
-                  let next = cells.getNextUp(newSelected)
-                  if (newSelected === next) break
-                  newSelected = next
-                }
-              }
-              break
-            case 'down':
-              newSelected = cells.getNextDown(state.areaSelect.end)
-              if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
-                  let next = cells.getNextDown(newSelected)
-                  if (newSelected === next) break
-                  newSelected = next
-                }
-              }
-              break
-            case 'left':
-              newSelected = cells.getNextLeft(state.areaSelect.end)
-              if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
-                  let next = cells.getNextLeft(newSelected)
-                  if (newSelected === next) break
-                  newSelected = next
-                }
-              }
-              break
-            case 'right':
-              newSelected = cells.getNextRight(state.areaSelect.end)
-              if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
-                  let next = cells.getNextRight(newSelected)
-                  if (newSelected === next) break
-                  newSelected = next
-                }
-              }
-              break
-            default: return {state, cells}
-          }
-          state.areaSelect.end = newSelected
-          let newRange = cells.getCellsInRange(state.areaSelect)
-
-          // now that we have updated the selected range, refresh all that may have been affected
-          cells.bumpCells(oldRange.map(c => c.name))
-          cells.bumpCells(newRange.map(c => c.name))
+        // if there's not a selected area, start it now
+        if (!state.areaSelect.start && state.selected) {
+          let startAt = cells.getByName(state.selected)
+          state.areaSelect = {start: startAt, end: startAt}
         }
+        let oldRange = cells.getCellsInRange(state.areaSelect)
+
+        var newSelected
+        switch (keyName) {
+          case 'up':
+            newSelected = cells.getNextUp(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextUp(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          case 'down':
+            newSelected = cells.getNextDown(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextDown(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          case 'left':
+            newSelected = cells.getNextLeft(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextLeft(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          case 'right':
+            newSelected = cells.getNextRight(state.areaSelect.end)
+            if (e.ctrlKey) {
+              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+                let next = cells.getNextRight(newSelected)
+                if (newSelected === next) break
+                newSelected = next
+              }
+            }
+            break
+          default: return {state, cells}
+        }
+        state.areaSelect.end = newSelected
+        let newRange = cells.getCellsInRange(state.areaSelect)
+
+        // now that we have updated the selected range, refresh all that may have been affected
+        cells.bumpCells(oldRange.map(c => c.name))
+        cells.bumpCells(newRange.map(c => c.name))
+
         return {state, cells}
       }),
 
@@ -517,6 +518,7 @@ function modifications (actions) {
         }
 
         var cellBeingUpdated = startAt
+        var lastUpdated
         var currentRow = startAt
         var next
         for (let r = 0; r < rows.length; r++) {
@@ -524,6 +526,7 @@ function modifications (actions) {
           for (let v = 0; v < row.length; v++) {
             let value = row[v]
             cells.setByName(cellBeingUpdated.name, value)
+            lastUpdated = cellBeingUpdated
             next = cells.getNextRight(cellBeingUpdated)
             if (cellBeingUpdated === next) break
             cellBeingUpdated = next
@@ -532,6 +535,12 @@ function modifications (actions) {
           if (currentRow === next) break
           currentRow = next
           cellBeingUpdated = next
+        }
+
+        // the pasted cells should be selected
+        state.areaSelect = {
+          start: startAt,
+          end: lastUpdated
         }
 
         return {state, cells}
