@@ -41,10 +41,15 @@ export const vrender = {
   },
   cell: function (state, cell) {
     var classes = []
+
     if (state.selected === cell.name) classes.push('selected')
     if (state.areaSelect.start) {
-      if (Grid.cellInRange(cell, state.areaSelect)) classes.push('range')
+      if (Grid.cellInRange(cell, state.areaSelect)) classes.push('selectArea')
     }
+    if (state.handleSelect.start) {
+      if (Grid.cellInRange(cell, state.handleSelect)) classes.push('handleArea')
+    }
+
     switch (cell.calc) {
       case CALCULATING:
         classes.push('calculating')
@@ -66,7 +71,10 @@ export const vrender = {
       return h('div.cell', {
         className: cn,
         dataset: cd
-      }, cell.calc === null ? cell.raw : cell.calc)
+      }, [
+        cell.calc === null ? cell.raw : cell.calc,
+        cell.handle ? h('div.handle', {innerHTML: '&#8203;'}) : null
+      ])
     } else {
       let raw = state.currentInput || cell.raw
 

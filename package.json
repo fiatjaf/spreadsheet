@@ -8,6 +8,7 @@
     "@cycle/dom": "9.0.2",
     "beirada": "^0.1.2",
     "cycle-restart": "0.0.9",
+    "deep-extend": "^0.4.1",
     "formulajs": "fiatjaf/formula.js",
     "keycode": "^2.1.0",
     "letters": "0.0.2",

@@ -11,6 +11,8 @@ class Grid {
 
     this.rowRev = {}
 
+    this._currentHandle = null
+
     this.resetGrid(w, h)
   }
 
@@ -28,7 +30,8 @@ class Grid {
           name: name,
           row: row,
           column: col,
-          rev: 0
+          rev: 0,
+          handle: false
         }
 
         this.byName[name] = cell
@@ -52,6 +55,22 @@ class Grid {
     let cell = this.byRowColumn[row][column]
     cell.raw = value
     this.calc(cell, true)
+    this.bumpCell(cell.name)
+  }
+
+  unsetHandle () {
+    let old = this._currentHandle
+    if (old) {
+      old.handle = false
+      this.bumpCell(old.name)
+    }
+  }
+
+  setHandle (cell) {
+    this.unsetHandle()
+
+    cell.handle = true
+    this._currentHandle = cell
     this.bumpCell(cell.name)
   }
 
@@ -101,6 +120,16 @@ class Grid {
     return inRange
   }
 
+  lastCellInRange (range) {
+    // in a given range, returns the cell at the bottom-right corner
+    let start = range.start
+    let end = range.end
+    let lastRow = start.row > end.row ? start.row : end.row
+    let lastCol = start.column > end.column ? start.column : end.column
+
+    return this.getByRowColumn(lastRow, lastCol)
+  }
+
   numRows () {
     return this.byRowColumn.length
   }
@@ -138,8 +167,13 @@ class Grid {
   }
 
   static cellInRange (cell, range) {
-    return between(cell.column, range.start.column, range.end.column) &&
-           between(cell.row, range.start.row, range.end.row)
+    try {
+      return between(cell.column, range.start.column, range.end.column) &&
+             between(cell.row, range.start.row, range.end.row)
+    } catch (e) {
+      console.log('range.end not set.')
+      return false
+    }
   }
 }
 

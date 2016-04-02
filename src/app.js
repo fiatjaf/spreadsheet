@@ -1,5 +1,6 @@
 import Rx from 'rx'
 import keycode from 'keycode'
+import extend from 'deep-extend'
 
 import Grid from './grid'
 import {vrender} from './vrender'
@@ -10,7 +11,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let cellBlur$ = DOM.select('.cell.editing').events('blur')
 
   let bufferedCellClick$ = cellClick$
-    .map(e => e.target.dataset.name)
+    .map(e => e.ownerTarget.dataset.name)
     .buffer(() => cellClick$.debounce(250))
     .share()
 
@@ -36,7 +37,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
         e.preventDefault()
         e.stopPropagation()
       }
-      if (keyName === 'backspace' && e.target.tagName !== 'INPUT') {
+      if (keyName === 'backspace' && e.ownerTarget.tagName !== 'INPUT') {
         e.preventDefault()
         e.stopPropagation()
       }
@@ -61,7 +62,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     .map(events => events[0])
 
   let keyCommand$ = nonCharacterKeydown$
-    .filter(e => e.target.tagName !== 'INPUT')
+    .filter(e => e.ownerTarget.tagName !== 'INPUT')
     .map(e => [keycode(e), e])
 
   return {
@@ -74,17 +75,17 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     topClick$,
     topBlur$,
     topInput$: topInput$
-      .map(e => e.target.value),
+      .map(e => e.ownerTarget.value),
     input$: cellInput$
-      .map(e => e.target.value),
+      .map(e => e.ownerTarget.value),
     injected$: INJECT.updated$,
     cellBlur$,
     cellMouseDown$: cellMouseDown$
-      .map(e => e.target.dataset.name),
+      .map(e => e.ownerTarget.dataset.name),
     cellMouseEnter$: cellMouseEnter$
-      .map(e => e.target.dataset.name),
+      .map(e => e.ownerTarget.dataset.name),
     cellMouseUp$: cellMouseUp$
-      .map(e => e.target.dataset.name),
+      .map(e => e.ownerTarget.dataset.name),
     modifySelection$: keyCommand$
       .filter(([_, e]) => e.shiftKey),
     keyCommandFromInput$: editingKeydown$
@@ -570,16 +571,16 @@ export default function app ({
   COPYPASTE,
   INJECT,
   CELLS: cells$ = Rx.Observable.just(new Grid(6, 6)).shareReplay(1),
+  STATE: state$ = Rx.Observable.just(null)
+    .map(state => extend({areaSelect: {}, handleSelect: {}}, state || {}))
+    .shareReplay(1),
   keydown: keydown$,
-  keypress: keypress$,
-  state: state$ = Rx.Observable.just({areaSelect: {}})
+  keypress: keypress$
 }) {
   let actions = intent(DOM, COPYPASTE, INJECT, keydown$, keypress$)
 
   let mod$ = modifications(actions)
     .startWith((state, cells) => ({state, cells}))
-
-  state$ = state$.shareReplay(1)
 
   let signal$ = Rx.Observable.combineLatest(
     state$,
@@ -595,6 +596,33 @@ export default function app ({
       }
     }
   )
+    .flatMap(({state, cells}) => {
+      state.areaLast = false
+      let o = Rx.Observable.just({state, cells})
+
+      return o.concat(
+        o
+          .delay(1)
+          .map(({state, cells}) => {
+            // postpone setting handle
+            if (!state.selecting) {
+              if (state.areaSelect.start) {
+                let last = cells.lastCellInRange(state.areaSelect)
+                cells.setHandle(last)
+                return {state, cells}
+              } else if (state.selected) {
+                let last = cells.getByName(state.selected)
+                cells.setHandle(last)
+                return {state, cells}
+              }
+            } else {
+              cells.unsetHandle()
+              return {state, cells}
+            }
+          })
+          .filter(x => x)
+      )
+    })
     .share()
 
   let inject$ = actions.cellMouseUp$
@@ -665,6 +693,8 @@ export default function app ({
     INJECT: inject$,
     ADAPTWIDTH: DOM.select('.cell.editing input').observable
       .filter(inputs => inputs.length)
-      .map(inputs => inputs[0])
+      .map(inputs => inputs[0]),
+    STATE: state$,
+    CELLS: cells$
   }
 }
