@@ -88,12 +88,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     modifySelection$: keyCommand$
       .filter(([_, e]) => e.shiftKey),
     keyCommandFromInput$: editingKeydown$
-      .map(e => [keycode(e), e])
-      .filter(([keyName]) =>
-        keyName === 'esc' ||
-        keyName === 'enter' ||
-        keyName === 'tab'
-      ),
+      .map(e => [keycode(e), e]),
     keyCommandNotFromInput$: keyCommand$,
     eraseSelection$: Rx.Observable.merge(
       keyCommand$.filter(([keyName, _]) => keyName === 'delete'),
@@ -343,19 +338,32 @@ function modifications (actions) {
       }),
 
     actions.keyCommandFromInput$
-      .map(([keyName]) => function stopEditingFromEscapeMod (state, cells) {
+      .map(([keyName]) => function changeEditingStateMod (state, cells) {
         let cell = cells.getByName(state.editing)
         var next
 
-        if (keyName === 'enter') {
-          cells.setByName(state.editing, state.currentInput)
-          next = cells.getNextDown(cell).name
-        } else if (keyName === 'tab') {
-          cells.setByName(state.editing, state.currentInput)
-          next = cells.getNextRight(cell).name
-        } else if (keyName === 'esc') {
-          cells.setByName(state.editing, state.valueBeforeEdit)
-          next = state.editing
+        switch (keyName) {
+          case 'enter':
+            cells.setByName(state.editing, state.currentInput)
+            next = cells.getNextDown(cell).name
+            break
+          case 'tab':
+            cells.setByName(state.editing, state.currentInput)
+            next = cells.getNextRight(cell).name
+            break
+          case 'up':
+            cells.setByName(state.editing, state.currentInput)
+            next = cells.getNextUp(cell).name
+            break
+          case 'down':
+            cells.setByName(state.editing, state.currentInput)
+            next = cells.getNextDown(cell).name
+            break
+          case 'esc':
+            cells.setByName(state.editing, state.valueBeforeEdit)
+            next = state.editing
+            break
+          default: return {state, cells}
         }
 
         state.editing = null
