@@ -1,4 +1,4 @@
-import {Observable} from 'rx'
+import Rx from 'rx'
 import keycode from 'keycode'
 
 import Grid from './grid'
@@ -60,6 +60,10 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     // then go back to the one event stream
     .map(events => events[0])
 
+  let keyCommand$ = nonCharacterKeydown$
+    .filter(e => e.target.tagName !== 'INPUT')
+    .map(e => [keycode(e), e])
+
   return {
     singleCellClick$: bufferedCellClick$
       .filter(names => names.length === 1)
@@ -81,9 +85,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
       .map(e => e.target.dataset.name),
     cellMouseUp$: cellMouseUp$
       .map(e => e.target.dataset.name),
-    keyCommand$: nonCharacterKeydown$
-      .filter(e => e.target.tagName !== 'INPUT')
-      .map(e => [keycode(e), e]),
+    keyCommandNotFromInput$: keyCommand$,
     keyCommandFromInput$: editingKeydown$
       .map(e => [keycode(e), e])
       .filter(([keyName]) =>
@@ -91,6 +93,10 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
         keyName === 'enter' ||
         keyName === 'tab'
       ),
+    eraseSelection$: Rx.Observable.merge(
+      keyCommand$.filter(([keyName, _]) => keyName === 'delete'),
+      COPYPASTE.cutting$
+    ),
     charEntered$: keypress$
       .filter(e => {
         let code = (e.which || e.keyCode || e.charCode)
@@ -103,7 +109,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
 }
 
 function modifications (actions) {
-  return Observable.merge(
+  return Rx.Observable.merge(
     actions.singleCellClick$
       .merge(actions.cellMouseDown$)
       .map(cellName => function selectCellMod (state, cells) {
@@ -131,7 +137,7 @@ function modifications (actions) {
         return {state, cells}
       }),
 
-    actions.keyCommand$
+    actions.keyCommandNotFromInput$
       .map(([keyName, e]) => function moveSelectedMod (state, cells) {
         if (state.selected && !e.shiftKey) {
           let old = cells.getByName(state.selected)
@@ -415,20 +421,25 @@ function modifications (actions) {
         return {state, cells}
       }),
 
-    actions.keyCommand$
+    actions.eraseSelection$
+      .map(() => function eraseSelectionMod (state, cells) {
+        var toErase = []
+        if (state.areaSelect.start) { /* erase cells content everywhere */
+          toErase = cells.getCellsInRange(state.areaSelect)
+        } else if (state.selected) { /* erase this cell's content */
+          toErase = [cells.getByName(state.selected)]
+        }
+        toErase.forEach(cell => {
+          if (cell.raw !== '') cells.setByName(cell.name, '')
+          else cells.bumpCell(cell.name)
+        })
+        return {state, cells}
+      })
+      .delay(1),
+
+    actions.keyCommandNotFromInput$
       .map(([keyName, e]) => function modifySelectionMod (state, cells) {
-        if (keyName === 'delete') {
-          var toErase = []
-          if (state.areaSelect.start) { /* erase cells content everywhere */
-            toErase = cells.getCellsInRange(state.areaSelect)
-          } else if (state.selected) { /* erase this cell's content */
-            toErase = [cells.getByName(state.selected)]
-          }
-          toErase.forEach(cell => {
-            if (cell.raw !== '') cells.setByName(cell.name, '')
-            else cells.bumpCell(cell.name)
-          })
-        } else if (e.shiftKey) {
+        if (e.shiftKey) {
           // if there's not a selected area, start it now
           if (!state.areaSelect.start && state.selected) {
             let startAt = cells.getByName(state.selected)
@@ -532,10 +543,10 @@ export default function app ({
   DOM,
   COPYPASTE,
   INJECT,
-  CELLS: cells$ = Observable.just(new Grid(6, 6)).shareReplay(1),
+  CELLS: cells$ = Rx.Observable.just(new Grid(6, 6)).shareReplay(1),
   keydown: keydown$,
   keypress: keypress$,
-  state: state$ = Observable.just({areaSelect: {}})
+  state: state$ = Rx.Observable.just({areaSelect: {}})
 }) {
   let actions = intent(DOM, COPYPASTE, INJECT, keydown$, keypress$)
 
@@ -544,7 +555,7 @@ export default function app ({
 
   state$ = state$.shareReplay(1)
 
-  let signal$ = Observable.combineLatest(
+  let signal$ = Rx.Observable.combineLatest(
     state$,
     cells$,
     mod$,
@@ -575,12 +586,10 @@ export default function app ({
     )
     .filter(x => x)
 
-  let valuesToCopy$ = COPYPASTE.copying$
+  let valuesToCopy$ = COPYPASTE.copying$.merge(COPYPASTE.cutting$)
     .withLatestFrom(
       signal$,
       (_, {state, cells}) => {
-        console.log(_, state)
-
         // determine where will the copy start
         var startAt
         var endAt

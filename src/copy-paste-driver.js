@@ -11,9 +11,7 @@ function makeCopyPasteDriver () {
 
     values$
       .subscribe(({raw, calc}) => {
-        var elem = document.createElement('textarea')
-        elem.className = 'copy-paste'
-        elem.id = 'copy-paste'
+        let elem = create()
         elem.value = calc
         document.body.appendChild(elem)
         elem.focus()
@@ -29,6 +27,12 @@ function makeCopyPasteDriver () {
     let ctrlCReleased$ = keyup$
       .filter(e => e.ctrlKey && e.which === 67)
       .filter(e => e.target.tagName !== 'INPUT')
+    let ctrlXPressed$ = keydown$
+      .filter(e => e.ctrlKey && e.which === 88)
+      .filter(e => e.target.tagName !== 'INPUT')
+    let ctrlXReleased$ = keyup$
+      .filter(e => e.ctrlKey && e.which === 88)
+      .filter(e => e.target.tagName !== 'INPUT')
     let ctrlVPressed$ = keydown$
       .filter(e => e.ctrlKey && e.which === 86)
       .filter(e => e.target.tagName !== 'INPUT')
@@ -36,31 +40,55 @@ function makeCopyPasteDriver () {
       .filter(e => e.ctrlKey && e.which === 86)
       .filter(e => e.target.tagName !== 'INPUT')
 
+    ctrlXReleased$
+      .subscribe(remove)
+
     ctrlCReleased$
-      .subscribe(() => {
-        let elem = document.getElementById('copy-paste')
-        document.body.removeChild(elem)
-      })
+      .subscribe(remove)
 
     ctrlVPressed$
       .subscribe(() => {
-        var elem = document.createElement('textarea')
-        elem.id = 'copy-paste'
+        let elem = create()
         document.body.appendChild(elem)
         elem.focus()
       })
 
     let pasted$ = ctrlVReleased$
       .map(() => {
-        let elem = document.getElementById('copy-paste')
-        let pasted = elem.value
-        document.body.removeChild(elem)
+        let pasted = get().value
         return copiedCache[pasted] || pasted
       })
+      .filter(v => v)
+      .do(remove)
+
+    // ctrl released
+    keyup$
+      .filter(e => e.which === 17)
+      .subscribe(remove)
 
     return {
       copying$: ctrlCPressed$,
+      cutting$: ctrlXPressed$,
       pasted$
     }
   }
+}
+
+function remove () {
+  let elements = document.getElementsByClassName('copy-paste')
+  for (let i = 0; i < elements.length; i++) {
+    let elem = elements[i]
+    elem.parentNode.removeChild(elem)
+  }
+}
+
+function create () {
+  var elem = document.createElement('textarea')
+  elem.className = 'copy-paste'
+  return elem
+}
+
+function get () {
+  let elems = document.getElementsByClassName('copy-paste')
+  return elems[elems.length - 1] || {value: null}
 }
