@@ -48,21 +48,21 @@ class Grid {
     let cell = this.byName[name]
     cell.raw = value
     this.calc(cell, true)
-    this.bumpCell(cell.name)
+    this.bumpCell(cell)
   }
 
   setByRowColumn (row, column, value) {
     let cell = this.byRowColumn[row][column]
     cell.raw = value
     this.calc(cell, true)
-    this.bumpCell(cell.name)
+    this.bumpCell(cell)
   }
 
   unsetHandle () {
     let old = this._currentHandle
     if (old) {
       old.handle = false
-      this.bumpCell(old.name)
+      this.bumpCell(old)
     }
   }
 
@@ -71,13 +71,13 @@ class Grid {
 
     cell.handle = true
     this._currentHandle = cell
-    this.bumpCell(cell.name)
+    this.bumpCell(cell)
   }
 
   recalc (name) {
     let cell = this.byName[name]
     this.calc(cell, false)
-    this.bumpCell(cell.name)
+    this.bumpCell(cell)
   }
 
   getByName (name) {
@@ -88,24 +88,23 @@ class Grid {
     return this.byRowColumn[row][column]
   }
 
-  bumpCell (cellName) {
-    let cell = this.byName[cellName]
+  bumpCell (cell) {
     cell.rev++
     this.rowRev[cell.row]++
   }
 
-  bumpCellByRowColumn (row, column) {
-    let cell = this.byRowColumn[row][column]
-    this.bumpCell(cell.name)
+  bumpCellByName (cellName) {
+    let cell = this.getByName(cellName)
+    this.bumpCell(cell)
   }
 
-  bumpCells (names) {
-    names.forEach(name => this.bumpCell(name))
+  bumpCells (cells) {
+    cells.forEach(cell => this.bumpCell(cell))
   }
 
   bumpAllCells () {
     for (let name in this.byName) {
-      this.bumpCell(name)
+      this.bumpCell(this.byName[name])
     }
   }
 

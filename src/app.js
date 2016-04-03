@@ -37,7 +37,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
         e.preventDefault()
         e.stopPropagation()
       }
-      if (keyName === 'backspace' && e.ownerTarget.tagName !== 'INPUT') {
+      if (keyName === 'backspace' && e.target.tagName !== 'INPUT') {
         e.preventDefault()
         e.stopPropagation()
       }
@@ -62,7 +62,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     .map(events => events[0])
 
   let keyCommand$ = nonCharacterKeydown$
-    .filter(e => e.ownerTarget.tagName !== 'INPUT')
+    .filter(e => e.target.tagName !== 'INPUT')
     .map(e => [keycode(e), e])
 
   return {
@@ -114,13 +114,13 @@ function modifications (actions) {
         // unmark the old selected cell
         let old = cells.getByName(state.selected)
         if (old) {
-          cells.bumpCell(old.name)
+          cells.bumpCell(old)
         }
 
         // unmark the old selected range
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange.map(c => c.name))
+          cells.bumpCells(inRange)
           state.selecting = false
           state.areaSelect = {}
         }
@@ -131,7 +131,7 @@ function modifications (actions) {
         // mark the new cell
         let cell = cells.getByName(cellName)
         state.selected = cell.name
-        cells.bumpCell(cell.name)
+        cells.bumpCell(cell)
         return {state, cells}
       }),
 
@@ -196,13 +196,13 @@ function modifications (actions) {
             default: return {state, cells}
           }
           state.selected = newSelected.name
-          cells.bumpCell(old.name)
-          cells.bumpCell(newSelected.name)
+          cells.bumpCell(old)
+          cells.bumpCell(newSelected)
 
           // unmark the old selected range
           if (state.areaSelect.start) {
             let inRange = cells.getCellsInRange(state.areaSelect)
-            cells.bumpCells(inRange.map(c => c.name))
+            cells.bumpCells(inRange)
             state.selecting = false
             state.areaSelect = {}
           }
@@ -216,13 +216,13 @@ function modifications (actions) {
         let old = cells.getByName(state.selected)
         if (old) {
           state.selected = null
-          cells.bumpCell(old.name)
+          cells.bumpCell(old)
         }
 
         // unmark the old selected range
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange.map(c => c.name))
+          cells.bumpCells(inRange)
           state.selecting = false
           state.areaSelect = {}
         }
@@ -233,7 +233,7 @@ function modifications (actions) {
         state.editingTop = false
         state.valueBeforeEdit = cell.raw
         state.currentInput = cell.raw
-        cells.bumpCell(cell.name)
+        cells.bumpCell(cell)
         return {state, cells}
       }),
 
@@ -248,7 +248,7 @@ function modifications (actions) {
           state.valueBeforeEdit = cell.raw
           cell.raw = character
           state.currentInput = cell.raw
-          cells.bumpCell(cell.name)
+          cells.bumpCell(cell)
 
           // unselect it
           state.selected = null
@@ -256,7 +256,7 @@ function modifications (actions) {
           // unmark the old selected range
           if (state.areaSelect.start) {
             let inRange = cells.getCellsInRange(state.areaSelect)
-            cells.bumpCells(inRange.map(c => c.name))
+            cells.bumpCells(inRange)
             state.selecting = false
             state.areaSelect = {}
           }
@@ -277,7 +277,7 @@ function modifications (actions) {
 
         state.valueBeforeEdit = cell.raw
         state.currentInput = cell.raw
-        cells.bumpCell(cell.name)
+        cells.bumpCell(cell)
 
         // unselect it
         state.selected = null
@@ -285,7 +285,7 @@ function modifications (actions) {
         // unmark the old selected range
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange.map(c => c.name))
+          cells.bumpCells(inRange)
           state.selecting = false
           state.areaSelect = {}
         }
@@ -307,7 +307,7 @@ function modifications (actions) {
       .map(val => function updateCellWhenEditingTopMod (state, cells) {
         // this happens in addition to saveCurrentInputMod,
         // so we don't have to repeat what is done there.
-        if (state.editingTop) cells.bumpCell(state.editing)
+        if (state.editingTop) cells.bumpCellByName(state.editing)
         return {state, cells}
       }),
 
@@ -325,7 +325,7 @@ function modifications (actions) {
           let inRange = cells.getCellsInRange(state.areaSelect)
           state.selecting = null
           state.areaSelect = {}
-          cells.bumpCells(inRange.map(c => c.name))
+          cells.bumpCells(inRange)
         }
 
         if (state.editing) {
@@ -346,23 +346,23 @@ function modifications (actions) {
         switch (keyName) {
           case 'enter':
             cells.setByName(state.editing, state.currentInput)
-            next = cells.getNextDown(cell).name
+            next = cells.getNextDown(cell)
             break
           case 'tab':
             cells.setByName(state.editing, state.currentInput)
-            next = cells.getNextRight(cell).name
+            next = cells.getNextRight(cell)
             break
           case 'up':
             cells.setByName(state.editing, state.currentInput)
-            next = cells.getNextUp(cell).name
+            next = cells.getNextUp(cell)
             break
           case 'down':
             cells.setByName(state.editing, state.currentInput)
-            next = cells.getNextDown(cell).name
+            next = cells.getNextDown(cell)
             break
           case 'esc':
             cells.setByName(state.editing, state.valueBeforeEdit)
-            next = state.editing
+            next = cells.getByName(state.editing)
             break
           default: return {state, cells}
         }
@@ -371,7 +371,7 @@ function modifications (actions) {
         state.currentInput = null
 
         cells.bumpCell(next)
-        state.selected = next
+        state.selected = next.name
 
         return {state, cells}
       }),
@@ -381,7 +381,7 @@ function modifications (actions) {
         // unmark the old selected range
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange.map(c => c.name))
+          cells.bumpCells(inRange)
         }
 
         let cell = cells.getByName(cellName)
@@ -390,7 +390,7 @@ function modifications (actions) {
           start: cell,
           end: cell
         }
-        cells.bumpCell(cell.name)
+        cells.bumpCell(cell)
 
         return {state, cells}
       }),
@@ -431,8 +431,8 @@ function modifications (actions) {
 
           // erase the selection in this special case
           let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange.map(c => c.name))
-          if (state.selected) cells.bumpCell(state.selected)
+          cells.bumpCells(inRange)
+          if (state.selected) cells.bumpCellByName(state.selected)
           state.selected = null
           state.areaSelect = {}
         }
@@ -451,7 +451,7 @@ function modifications (actions) {
         }
         toErase.forEach(cell => {
           if (cell.raw !== '') cells.setByName(cell.name, '')
-          else cells.bumpCell(cell.name)
+          else cells.bumpCell(cell)
         })
         return {state, cells}
       })
@@ -514,8 +514,8 @@ function modifications (actions) {
         let newRange = cells.getCellsInRange(state.areaSelect)
 
         // now that we have updated the selected range, refresh all that may have been affected
-        cells.bumpCells(oldRange.map(c => c.name))
-        cells.bumpCells(newRange.map(c => c.name))
+        cells.bumpCells(oldRange)
+        cells.bumpCells(newRange)
 
         return {state, cells}
       }),

@@ -19,7 +19,7 @@ export default function calc (cell, changed) {
   // mark it to recalc
   for (let dependent in graph.inadj(cell.name)) {
     cell.calc = CALCULATING
-    this.bumpCell(cell.name)
+    this.bumpCell(cell)
     setTimeout(() => this.recalc(dependent), 1)
   }
 
