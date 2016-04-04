@@ -1,6 +1,7 @@
 import {h} from '@cycle/dom'
 
-import Grid from './grid'
+import { cellInRange } from './grid'
+import { cellInHandleDrag } from './handle-drag'
 import partial from './partial'
 import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
 import {deselect} from './helpers'
@@ -44,10 +45,10 @@ export const vrender = {
 
     if (state.selected === cell.name) classes.push('selected')
     if (state.areaSelect.start) {
-      if (Grid.cellInRange(cell, state.areaSelect)) classes.push('selectArea')
+      if (cellInRange(cell, state.areaSelect)) classes.push('selectArea')
     }
-    if (state.handleSelect.start) {
-      if (Grid.cellInRange(cell, state.handleSelect)) classes.push('handleArea')
+    if (state.handleDrag.length) {
+      if (cellInHandleDrag(cell, state.handleDrag)) classes.push('handleArea')
     }
 
     switch (cell.calc) {

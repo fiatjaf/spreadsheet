@@ -112,17 +112,23 @@ class Grid {
     var inRange = []
     for (let name in this.byName) {
       let cell = this.byName[name]
-      if (Grid.cellInRange(cell, range)) {
+      if (cellInRange(cell, range)) {
         inRange.push(cell)
       }
     }
     return inRange
   }
 
-  lastCellInRange (range) {
+  firstCellInRange ({start, end}) {
+    // in a given range, returns the cell at the top-left corner
+    let firstRow = start.row < end.row ? start.row : end.row
+    let firstCol = start.column < end.column ? start.column : end.column
+
+    return this.getByRowColumn(firstRow, firstCol)
+  }
+
+  lastCellInRange ({start, end}) {
     // in a given range, returns the cell at the bottom-right corner
-    let start = range.start
-    let end = range.end
     let lastRow = start.row > end.row ? start.row : end.row
     let lastCol = start.column > end.column ? start.column : end.column
 
@@ -164,18 +170,17 @@ class Grid {
       cell.column === 0 ? 0 : cell.column - 1
     )
   }
-
-  static cellInRange (cell, range) {
-    try {
-      return between(cell.column, range.start.column, range.end.column) &&
-             between(cell.row, range.start.row, range.end.row)
-    } catch (e) {
-      console.log('range.end not set.')
-      return false
-    }
-  }
 }
 
-const between = (n, a, b) => a < b ? (a <= n) && (n <= b) : (b <= n) && (n <= a)
+export const between = (n, a, b) => a < b ? (a <= n) && (n <= b) : (b <= n) && (n <= a)
+export function cellInRange (cell, range) {
+  try {
+    return between(cell.column, range.start.column, range.end.column) &&
+           between(cell.row, range.start.row, range.end.row)
+  } catch (e) {
+    console.log('range.end not set.')
+    return false
+  }
+}
 
 export default Grid

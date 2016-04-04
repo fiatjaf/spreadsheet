@@ -2,11 +2,13 @@ import Rx from 'rx'
 import keycode from 'keycode'
 import extend from 'deep-extend'
 
-import Grid from './grid'
+import Grid, { cellInRange, between } from './grid'
+import { handleValueGenerator } from './handle-drag'
 import {vrender} from './vrender'
 
 function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
+    .filter(e => e.target === e.ownerTarget)
   let cellInput$ = DOM.select('.cell.editing input').events('input')
   let cellBlur$ = DOM.select('.cell.editing').events('blur')
 
@@ -20,8 +22,12 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let topBlur$ = DOM.select('.top input').events('blur')
 
   let cellMouseDown$ = DOM.select('.cell:not(.editing)').events('mousedown')
+    .filter(e => e.target === e.ownerTarget)
   let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
   let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
+
+  // "handle" is not a verb, but that small box that stands at the side of the cell.
+  let handleMouseDown$ = DOM.select('.handle').events('mousedown')
 
   let editingKeydown$ = DOM.select('.cell.editing input').events('keydown')
 
@@ -80,12 +86,10 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
       .map(e => e.ownerTarget.value),
     injected$: INJECT.updated$,
     cellBlur$,
-    cellMouseDown$: cellMouseDown$
-      .map(e => e.ownerTarget.dataset.name),
-    cellMouseEnter$: cellMouseEnter$
-      .map(e => e.ownerTarget.dataset.name),
-    cellMouseUp$: cellMouseUp$
-      .map(e => e.ownerTarget.dataset.name),
+    cellMouseDown$: cellMouseDown$.map(e => e.ownerTarget.dataset.name),
+    cellMouseEnter$: cellMouseEnter$.map(e => e.ownerTarget.dataset.name),
+    cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.dataset.name),
+    handleMouseDown$: handleMouseDown$.map(e => e.target.parentNode.dataset.name),
     modifySelection$: keyCommand$
       .filter(([_, e]) => e.shiftKey),
     keyCommandFromInput$: editingKeydown$
@@ -121,7 +125,7 @@ function modifications (actions) {
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
           cells.bumpCells(inRange)
-          state.selecting = false
+          state.areaSelecting = false
           state.areaSelect = {}
         }
 
@@ -203,7 +207,7 @@ function modifications (actions) {
           if (state.areaSelect.start) {
             let inRange = cells.getCellsInRange(state.areaSelect)
             cells.bumpCells(inRange)
-            state.selecting = false
+            state.areaSelecting = false
             state.areaSelect = {}
           }
         }
@@ -223,7 +227,7 @@ function modifications (actions) {
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
           cells.bumpCells(inRange)
-          state.selecting = false
+          state.areaSelecting = false
           state.areaSelect = {}
         }
 
@@ -257,7 +261,7 @@ function modifications (actions) {
           if (state.areaSelect.start) {
             let inRange = cells.getCellsInRange(state.areaSelect)
             cells.bumpCells(inRange)
-            state.selecting = false
+            state.areaSelecting = false
             state.areaSelect = {}
           }
         }
@@ -286,7 +290,7 @@ function modifications (actions) {
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
           cells.bumpCells(inRange)
-          state.selecting = false
+          state.areaSelecting = false
           state.areaSelect = {}
         }
 
@@ -323,7 +327,7 @@ function modifications (actions) {
         // unmark the old selected range
         if (state.areaSelect.start) {
           let inRange = cells.getCellsInRange(state.areaSelect)
-          state.selecting = null
+          state.areaSelecting = null
           state.areaSelect = {}
           cells.bumpCells(inRange)
         }
@@ -385,7 +389,7 @@ function modifications (actions) {
         }
 
         let cell = cells.getByName(cellName)
-        state.selecting = true
+        state.areaSelecting = true
         state.areaSelect = {
           start: cell,
           end: cell
@@ -395,29 +399,98 @@ function modifications (actions) {
         return {state, cells}
       }),
 
+    actions.handleMouseDown$
+      .map(cellName => function startDraggingHandleMod (state, cells) {
+        let base = state.areaSelect.start ? {
+          // in .handleDrag, .start is assured to be the top and
+          // leftmost cell and .end the bottom and rightmost
+          start: cells.firstCellInRange(state.areaSelect),
+          end: cells.lastCellInRange(state.areaSelect)
+        } : {start: cells.getByName(state.selected), end: cells.getByName(state.selected)}
+
+        state.handleSelecting = true
+        state.handleDrag = {
+          base: base,
+          type: 'column', // 'row' or 'column'
+          from: 'end', // 'start' or 'end' -- from where we will count the length
+          length: 0 // can be negative
+        }
+        return {state, cells}
+      }),
+
     actions.cellMouseEnter$
       .map((cellName) => function alterSelectionMod (state, cells) {
-        if (state.selecting) {
-          // cancel if the mouse key was released out of the browser window
-          let pressed = document.querySelectorAll('*:active')
-          if (!pressed.length ||
-              pressed[pressed.length - 1].dataset.name !== state.areaSelect.start.name) {
+        if (!state.areaSelecting && !state.handleSelecting) return {state, cells}
+
+        // if the mouse key was released out of the browser window
+        // we should detect it now and cancel the "selecting" state
+        let pressed = document.querySelectorAll('*:active')
+        let lastPressed = pressed[pressed.length - 1]
+        if (!pressed.length ||
+            ((state.handleSelecting &&
+              lastPressed.className !== 'handle') ||
+             (state.areaSelecting &&
+              lastPressed.dataset.name !== state.areaSelect.start.name))) {
+          if (state.handleSelecting) {
+            // "handle" area being hovered
+            state.handleDrag = {}
+            state.handleSelecting = false
+          } else {
+            // normal area select
             state.areaSelect = {}
-            state.selecting = false
-            return {state, cells}
+            state.areaSelecting = false
           }
 
-          // set the relevant range
-          let cell = cells.getByName(cellName)
-          state.areaSelect.end = cell
           cells.bumpAllCells()
+          return {state, cells}
         }
+
+        let cell = cells.getByName(cellName)
+        if (state.handleSelecting) {
+          let {base} = state.handleDrag
+
+          // handle select
+          if (cellInRange(cell, base)) {
+            // hovering the middle of the areaSelect -- nothing should happen
+            state.handleDrag.type = 'column'
+            state.handleDrag.from = 'end'
+            state.handleDrag.length = 0
+          } else if (between(cell.column, base.start.column, base.end.column)) {
+            // dragging to the top or bottom
+            state.handleDrag.type = 'row'
+            if (cell.row < base.start.row) { // top
+              state.handleDrag.from = 'start'
+              state.handleDrag.length = cell.row - base.start.row
+            } else { // bottom
+              state.handleDrag.from = 'end'
+              state.handleDrag.length = cell.row - base.end.row
+            }
+          } else if (between(cell.row, base.start.row, base.end.row)) {
+            // to the left or right
+            state.handleDrag.type = 'column'
+            if (cell.column < base.start.column) { // left
+              state.handleDrag.from = 'start'
+              state.handleDrag.length = cell.column - base.start.column
+            } else { // right
+              state.handleDrag.from = 'end'
+              state.handleDrag.length = cell.column - base.end.column
+            }
+          } else {
+            // some diagonal
+          }
+        } else {
+          // normal area select
+          state.areaSelect.end = cell
+        }
+
+        cells.bumpAllCells()
         return {state, cells}
       }),
 
     actions.cellMouseUp$
       .map((cellName) => function stopSelectingMod (state, cells) {
         if (state.editing && state.currentInput[0] === '=') {
+          // the case where we are editing some cell
           // prepare to inject selected cell (or range) to input
           let add = state.areaSelect.start
             ? state.areaSelect.start !== state.areaSelect.end
@@ -437,7 +510,37 @@ function modifications (actions) {
           state.areaSelect = {}
         }
 
-        state.selecting = false
+        if (state.handleSelecting && state.handleDrag.length) {
+          // perform the handle drag operation
+          let generate = handleValueGenerator(cells, state.handleDrag)
+          let { base, length, from, type } = state.handleDrag
+          let it = length / Math.abs(length) // either +1 or -1
+          if (type === 'row') {
+            for (let c = base.start.column; c <= base.end.column; c++) {
+              let distance = 1
+              for (let r = base[from].row + it; r !== base[from].row + length + it; r = r + it) {
+                let cell = cells.getByRowColumn(r, c)
+                cells.setByName(cell.name, generate(c, distance))
+                distance++
+              }
+            }
+          } else {
+            for (let r = base.start.row; r <= base.end.row; r++) {
+              let distance = 1
+              for (let c = base[from].column + it; c !== base[from].column + length + it; c = c + it) {
+                let cell = cells.getByRowColumn(r, c)
+                cells.setByName(cell.name, generate(r, distance))
+                distance++
+              }
+            }
+          }
+
+          state.handleSelecting = false
+          state.handleDrag = {}
+        } else {
+          state.areaSelecting = false
+        }
+
         return {state, cells}
       }),
 
@@ -572,7 +675,7 @@ export default function app ({
   INJECT,
   CELLS: cells$ = Rx.Observable.just(new Grid(6, 6)).shareReplay(1),
   STATE: state$ = Rx.Observable.just(null)
-    .map(state => extend({areaSelect: {}, handleSelect: {}}, state || {}))
+    .map(state => extend({areaSelect: {}, handleDrag: {}}, state || {}))
     .shareReplay(1),
   keydown: keydown$,
   keypress: keypress$
@@ -597,7 +700,6 @@ export default function app ({
     }
   )
     .flatMap(({state, cells}) => {
-      state.areaLast = false
       let o = Rx.Observable.just({state, cells})
 
       return o.concat(
@@ -605,7 +707,7 @@ export default function app ({
           .delay(1)
           .map(({state, cells}) => {
             // postpone setting handle
-            if (!state.selecting) {
+            if (!state.areaSelecting) {
               if (state.areaSelect.start) {
                 let last = cells.lastCellInRange(state.areaSelect)
                 cells.setHandle(last)
