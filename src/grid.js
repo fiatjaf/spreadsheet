@@ -44,18 +44,19 @@ class Grid {
     }
   }
 
-  setByName (name, value) {
-    let cell = this.byName[name]
-    cell.raw = value
+  _set (cell, value) {
+    cell.raw = value.trim()
     this.calc(cell, true)
     this.bumpCell(cell)
   }
 
-  setByRowColumn (row, column, value) {
-    let cell = this.byRowColumn[row][column]
-    cell.raw = value
-    this.calc(cell, true)
-    this.bumpCell(cell)
+  set (cell, value) {
+    this._set(cell, value)
+  }
+
+  setByName (name, value) {
+    let cell = this.byName[name]
+    this.set(cell, value)
   }
 
   unsetHandle () {

@@ -148,7 +148,7 @@ function modifications (actions) {
             case 'up':
               newSelected = cells.getNextUp(old)
               if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !old.raw.trim()) {
+                while (!newSelected.raw === !old.raw) {
                   let next = cells.getNextUp(newSelected)
                   if (newSelected === next) break
                   newSelected = next
@@ -158,7 +158,7 @@ function modifications (actions) {
             case 'down':
               newSelected = cells.getNextDown(old)
               if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !old.raw.trim()) {
+                while (!newSelected.raw === !old.raw) {
                   let next = cells.getNextDown(newSelected)
                   if (newSelected === next) break
                   newSelected = next
@@ -171,7 +171,7 @@ function modifications (actions) {
             case 'left':
               newSelected = cells.getNextLeft(old)
               if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !old.raw.trim()) {
+                while (!newSelected.raw === !old.raw) {
                   let next = cells.getNextLeft(newSelected)
                   if (newSelected === next) break
                   newSelected = next
@@ -181,7 +181,7 @@ function modifications (actions) {
             case 'right':
               newSelected = cells.getNextRight(old)
               if (e.ctrlKey) {
-                while (!newSelected.raw.trim() === !old.raw.trim()) {
+                while (!newSelected.raw === !old.raw) {
                   let next = cells.getNextRight(newSelected)
                   if (newSelected === next) break
                   newSelected = next
@@ -250,9 +250,8 @@ function modifications (actions) {
           state.editing = cell.name
           state.editingTop = false
           state.valueBeforeEdit = cell.raw
-          cell.raw = character
-          state.currentInput = cell.raw
-          cells.bumpCell(cell)
+          state.currentInput = character
+          cells.set(cell, character)
 
           // unselect it
           state.selected = null
@@ -520,7 +519,7 @@ function modifications (actions) {
               let distance = 1
               for (let r = base[from].row + it; r !== base[from].row + length + it; r = r + it) {
                 let cell = cells.getByRowColumn(r, c)
-                cells.setByName(cell.name, generate(c, distance))
+                cells.set(cell, generate(c, distance))
                 distance++
               }
             }
@@ -529,7 +528,7 @@ function modifications (actions) {
               let distance = 1
               for (let c = base[from].column + it; c !== base[from].column + length + it; c = c + it) {
                 let cell = cells.getByRowColumn(r, c)
-                cells.setByName(cell.name, generate(r, distance))
+                cells.set(cell, generate(r, distance))
                 distance++
               }
             }
@@ -553,7 +552,7 @@ function modifications (actions) {
           toErase = [cells.getByName(state.selected)]
         }
         toErase.forEach(cell => {
-          if (cell.raw !== '') cells.setByName(cell.name, '')
+          if (cell.raw !== '') cells.set(cell, '')
           else cells.bumpCell(cell)
         })
         return {state, cells}
@@ -574,7 +573,7 @@ function modifications (actions) {
           case 'up':
             newSelected = cells.getNextUp(state.areaSelect.end)
             if (e.ctrlKey) {
-              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+              while (!newSelected.raw === !state.areaSelect.end.raw) {
                 let next = cells.getNextUp(newSelected)
                 if (newSelected === next) break
                 newSelected = next
@@ -584,7 +583,7 @@ function modifications (actions) {
           case 'down':
             newSelected = cells.getNextDown(state.areaSelect.end)
             if (e.ctrlKey) {
-              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+              while (!newSelected.raw === !state.areaSelect.end.raw) {
                 let next = cells.getNextDown(newSelected)
                 if (newSelected === next) break
                 newSelected = next
@@ -594,7 +593,7 @@ function modifications (actions) {
           case 'left':
             newSelected = cells.getNextLeft(state.areaSelect.end)
             if (e.ctrlKey) {
-              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+              while (!newSelected.raw === !state.areaSelect.end.raw) {
                 let next = cells.getNextLeft(newSelected)
                 if (newSelected === next) break
                 newSelected = next
@@ -604,7 +603,7 @@ function modifications (actions) {
           case 'right':
             newSelected = cells.getNextRight(state.areaSelect.end)
             if (e.ctrlKey) {
-              while (!newSelected.raw.trim() === !state.areaSelect.end.raw.trim()) {
+              while (!newSelected.raw === !state.areaSelect.end.raw) {
                 let next = cells.getNextRight(newSelected)
                 if (newSelected === next) break
                 newSelected = next
@@ -646,7 +645,7 @@ function modifications (actions) {
           let row = rows[r]
           for (let v = 0; v < row.length; v++) {
             let value = row[v]
-            cells.setByName(cellBeingUpdated.name, value)
+            cells.set(cellBeingUpdated, value)
             lastUpdated = cellBeingUpdated
             next = cells.getNextRight(cellBeingUpdated)
             if (cellBeingUpdated === next) break
