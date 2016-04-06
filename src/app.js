@@ -29,6 +29,12 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   // "handle" is not a verb, but that small box that stands at the side of the cell.
   let handleMouseDown$ = DOM.select('.handle').events('mousedown')
 
+  // at least let's attempt to handle Mac weirdnes with the "Command" key
+  const isMac = navigator.platform.indexOf('Mac') !== -1
+  keydown$ = keydown$.do(e => {
+    if (isMac) e.ctrlKey = e.metaKey
+  })
+
   let editingKeydown$ = keydown$
     .filter(e => e.target.tagName === 'INPUT')
     .map(e => [keycode(e), e])
