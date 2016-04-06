@@ -26,48 +26,13 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
   let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
 
-  let editingKeydown$ = DOM.select('.cell.editing input').events('keydown')
-
   // "handle" is not a verb, but that small box that stands at the side of the cell.
   let handleMouseDown$ = DOM.select('.handle').events('mousedown')
 
-  // filter only non-character-emitting keydown events
-  let nonCharacterKeydown$ = keydown$
-    // stop these events now, because after the delay
-    // it will be too late.
-    .do(e => {
-      let keyName = keycode(e)
-      if (keyName === 'tab' ||
-          keyName === 'up' ||
-          keyName === 'down') {
-        e.preventDefault()
-        e.stopPropagation()
-      }
-      if (keyName === 'backspace' && e.target.tagName !== 'INPUT') {
-        e.preventDefault()
-        e.stopPropagation()
-      }
-    })
-    .filter(e => {
-      let keyName = keycode(e)
-      return keyName !== 'shift' && keyName !== 'ctrl'
-    })
-    .merge(
-      keypress$.filter(e => {
-        let code = (e.which || e.keyCode || e.charCode)
-        return code !== 13 && code !== 127
-      })
-    )
-    // this ensures all keypresses will emit a buffer
-    .buffer(() => keydown$.delay(1))
-    // if a character-key was pressed, keypress$ will emit
-    // so the buffer will have 2 events, so we can use this
-    // to filter out keydowns with keypress attached
-    .filter(events => events.length === 1)
-    // then go back to the one event stream
-    .map(events => events[0])
-
-  let keyCommand$ = nonCharacterKeydown$
+  let editingKeydown$ = keydown$
+    .filter(e => e.target.tagName === 'INPUT')
+    .map(e => [keycode(e), e])
+  let keyCommand$ = keydown$
     .filter(e => e.target.tagName !== 'INPUT')
     .map(e => [keycode(e), e])
 
@@ -92,8 +57,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     handleMouseDown$: handleMouseDown$.map(e => e.target.parentNode.dataset.name),
     modifySelection$: keyCommand$
       .filter(([_, e]) => e.shiftKey),
-    keyCommandFromInput$: editingKeydown$
-      .map(e => [keycode(e), e]),
+    keyCommandFromInput$: editingKeydown$,
     keyCommandNotFromInput$: keyCommand$,
     eraseSelection$: Rx.Observable.merge(
       keyCommand$.filter(([keyName, _]) => keyName === 'delete'),
@@ -224,6 +188,9 @@ function modifications (actions) {
             state.areaSelecting = false
             state.areaSelect = {}
           }
+
+          // prevent default so keypress will not be triggered
+          e.preventDefault()
         }
         return {state, cells}
       }),
@@ -645,6 +612,9 @@ function modifications (actions) {
         // now that we have updated the selected range, refresh all that may have been affected
         cells.bumpCells(oldRange)
         cells.bumpCells(newRange)
+
+        // prevent default so keypress will not be triggered
+        e.preventDefault()
 
         return {state, cells}
       }),
