@@ -656,6 +656,7 @@ function modifications (actions) {
           return {state, cells}
         }
 
+        var txn = {cells: [], values: []}
         var cellBeingUpdated = startAt
         var lastUpdated
         var currentRow = startAt
@@ -664,7 +665,8 @@ function modifications (actions) {
           let row = rows[r]
           for (let v = 0; v < row.length; v++) {
             let value = row[v]
-            cells.set(cellBeingUpdated, value)
+            txn.cells.push(cellBeingUpdated)
+            txn.values.push(value)
             lastUpdated = cellBeingUpdated
             next = cells.getNextRight(cellBeingUpdated)
             if (cellBeingUpdated === next) break
@@ -675,6 +677,7 @@ function modifications (actions) {
           currentRow = next
           cellBeingUpdated = next
         }
+        cells.setMany(txn.cells, txn.values)
 
         // the pasted cells should be selected
         state.areaSelect = {
