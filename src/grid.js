@@ -12,6 +12,8 @@ class Grid {
     this.rowRev = {}
 
     this._currentHandle = null
+    this._undoStack = []
+    this._redoStack = []
 
     this.resetGrid(w, h)
   }
@@ -51,12 +53,57 @@ class Grid {
   }
 
   set (cell, value) {
+    // previous value in the undo stack, redo stack is cleaned
+    this._redoStack = []
+    let count = this._undoStack.push({[cell.name]: cell.raw})
+    if (count > 100) this._undoStack.shift()
+
     this._set(cell, value)
+  }
+
+  setMany (cellObjects, rawValues) {
+    var undo = {}
+    for (let i = 0; i < cellObjects.length; i++) {
+      let cell = cellObjects[i]
+      undo[cell.name] = cell.raw
+      this._set(cell, rawValues[i])
+    }
+    this._redoStack = []
+    let count = this._undoStack.push(undo)
+    if (count > 100) this._undoStack.shift()
   }
 
   setByName (name, value) {
     let cell = this.byName[name]
     this.set(cell, value)
+  }
+
+  undo () {
+    let undo = this._undoStack.pop()
+    if (undo) {
+      var redo = {}
+      for (let cellName in undo) {
+        let cell = this.getByName(cellName)
+        redo[cell.name] = cell.raw
+        let undoValue = undo[cellName]
+        this._set(cell, undoValue)
+      }
+      this._redoStack.push(redo)
+    }
+  }
+
+  redo () {
+    let redo = this._redoStack.pop()
+    if (redo) {
+      var undo = {}
+      for (let cellName in redo) {
+        let cell = this.getByName(cellName)
+        undo[cell.name] = cell.raw
+        let redoValue = redo[cellName]
+        this._set(cell, redoValue)
+      }
+      this._undoStack.push(undo)
+    }
   }
 
   unsetHandle () {

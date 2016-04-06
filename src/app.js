@@ -26,10 +26,10 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
   let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
 
+  let editingKeydown$ = DOM.select('.cell.editing input').events('keydown')
+
   // "handle" is not a verb, but that small box that stands at the side of the cell.
   let handleMouseDown$ = DOM.select('.handle').events('mousedown')
-
-  let editingKeydown$ = DOM.select('.cell.editing input').events('keydown')
 
   // filter only non-character-emitting keydown events
   let nonCharacterKeydown$ = keydown$
@@ -197,6 +197,20 @@ function modifications (actions) {
                 }
               }
               break
+            case 'z':
+              if (e.ctrlKey) {
+                if (e.shiftKey) {
+                  cells.redo()
+                } else {
+                  cells.undo()
+                }
+              }
+              return {state, cells}
+            case 'y':
+              if (e.ctrlKey) {
+                cells.redo()
+              }
+              return {state, cells}
             default: return {state, cells}
           }
           state.selected = newSelected.name
@@ -243,7 +257,7 @@ function modifications (actions) {
 
     actions.charEntered$
       .map(character => function startEditingFromCharEnteredMod (state, cells) {
-        if (state.selected && !state.editing) {
+        if (state.selected && !state.editing && /[a-z0-9 ]/i.test(character)) {
           let cell = cells.getByName(state.selected)
 
           // set the cell value and mark it as editing
@@ -251,7 +265,7 @@ function modifications (actions) {
           state.editingTop = false
           state.valueBeforeEdit = cell.raw
           state.currentInput = character
-          cells.set(cell, character)
+          cells.bumpCell(cell)
 
           // unselect it
           state.selected = null
@@ -301,7 +315,7 @@ function modifications (actions) {
       .merge(actions.injected$)
       .map(val => function saveCurrentInputMod (state, cells) {
         state.currentInput = val
-        cells.getByName(state.editing).raw = val
+        // cells.getByName(state.editing).raw = val
         return {state, cells}
       }),
 
@@ -332,7 +346,10 @@ function modifications (actions) {
         }
 
         if (state.editing) {
-          cells.setByName(state.editing, state.currentInput)
+          if (state.valueBeforeEdit !== state.currentInput) {
+            cells.setByName(state.editing, state.currentInput)
+          }
+          cells.bumpCellByName(state.editing)
           state.editing = null
           state.editingTop = false
         }
@@ -344,27 +361,28 @@ function modifications (actions) {
     actions.keyCommandFromInput$
       .map(([keyName]) => function changeEditingStateMod (state, cells) {
         let cell = cells.getByName(state.editing)
+        let changed = state.valueBeforeEdit !== state.currentInput
         var next
 
         switch (keyName) {
           case 'enter':
-            cells.setByName(state.editing, state.currentInput)
+            if (changed) cells.set(cell, state.currentInput)
             next = cells.getNextDown(cell)
             break
           case 'tab':
-            cells.setByName(state.editing, state.currentInput)
+            if (changed) cells.set(cell, state.currentInput)
             next = cells.getNextRight(cell)
             break
           case 'up':
-            cells.setByName(state.editing, state.currentInput)
+            if (changed) cells.set(cell, state.currentInput)
             next = cells.getNextUp(cell)
             break
           case 'down':
-            cells.setByName(state.editing, state.currentInput)
+            if (changed) cells.set(cell, state.currentInput)
             next = cells.getNextDown(cell)
             break
           case 'esc':
-            cells.setByName(state.editing, state.valueBeforeEdit)
+            if (changed) cells.set(cell, state.valueBeforeEdit)
             next = cells.getByName(state.editing)
             break
           default: return {state, cells}
@@ -373,6 +391,7 @@ function modifications (actions) {
         state.editing = null
         state.currentInput = null
 
+        cells.bumpCell(cell)
         cells.bumpCell(next)
         state.selected = next.name
 
@@ -511,6 +530,7 @@ function modifications (actions) {
 
         if (state.handleSelecting && state.handleDrag.length) {
           // perform the handle drag operation
+          var txn = {cells: [], values: []}
           let generate = handleValueGenerator(cells, state.handleDrag)
           let { base, length, from, type } = state.handleDrag
           let it = length / Math.abs(length) // either +1 or -1
@@ -519,7 +539,8 @@ function modifications (actions) {
               let distance = 1
               for (let r = base[from].row + it; r !== base[from].row + length + it; r = r + it) {
                 let cell = cells.getByRowColumn(r, c)
-                cells.set(cell, generate(c, distance))
+                txn.cells.push(cell)
+                txn.values.push(generate(c, distance))
                 distance++
               }
             }
@@ -528,11 +549,13 @@ function modifications (actions) {
               let distance = 1
               for (let c = base[from].column + it; c !== base[from].column + length + it; c = c + it) {
                 let cell = cells.getByRowColumn(r, c)
-                cells.set(cell, generate(r, distance))
+                txn.cells.push(cell)
+                txn.values.push(generate(r, distance))
                 distance++
               }
             }
           }
+          cells.setMany(txn.cells, txn.values)
 
           state.handleSelecting = false
           state.handleDrag = {}
@@ -551,10 +574,14 @@ function modifications (actions) {
         } else if (state.selected) { /* erase this cell's content */
           toErase = [cells.getByName(state.selected)]
         }
+
+        var txn = {cells: [], values: []}
         toErase.forEach(cell => {
-          if (cell.raw !== '') cells.set(cell, '')
-          else cells.bumpCell(cell)
+          txn.cells.push(cell)
+          txn.values.push('')
         })
+        cells.setMany(txn.cells, txn.values)
+
         return {state, cells}
       })
       .delay(1),

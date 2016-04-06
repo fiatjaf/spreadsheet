@@ -77,7 +77,8 @@ export const vrender = {
         cell.handle ? h('div.handle', {innerHTML: '&#8203;'}) : null
       ])
     } else {
-      let raw = state.currentInput || cell.raw
+      let raw = state.currentInput // if this is not set, then it is a bug.
+                                   // we cannot simply use `cell.raw` here
 
       return h('div.cell.editing', {
         className: cn,
