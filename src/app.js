@@ -55,10 +55,11 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     cellMouseEnter$: cellMouseEnter$.map(e => e.ownerTarget.dataset.name),
     cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.dataset.name),
     handleMouseDown$: handleMouseDown$.map(e => e.target.parentNode.dataset.name),
-    modifySelection$: keyCommand$
-      .filter(([_, e]) => e.shiftKey),
     keyCommandFromInput$: editingKeydown$,
-    keyCommandNotFromInput$: keyCommand$,
+    keyCommandWithShift$: keyCommand$
+      .filter(([_, e]) => e.shiftKey),
+    keyCommandWithoutShift$: keyCommand$
+      .filter(([_, e]) => !e.shiftKey),
     eraseSelection$: Rx.Observable.merge(
       keyCommand$.filter(([keyName, _]) => keyName === 'delete'),
       COPYPASTE.cutting$
@@ -103,9 +104,26 @@ function modifications (actions) {
         return {state, cells}
       }),
 
-    actions.keyCommandNotFromInput$
-      .map(([keyName, e]) => function moveSelectedMod (state, cells) {
-        if (state.selected && !e.shiftKey) {
+    actions.keyCommandWithoutShift$
+      .map(([keyName, e]) => function keyCommandWithoutShiftMod (state, cells) {
+        // first try some keybindings that may be triggered at any time
+        switch (keyName) {
+          case 'z':
+            if (e.ctrlKey) {
+              cells.undo()
+            }
+            e.preventDefault() // prevent default so keypress will not be triggered
+            return {state, cells}
+          case 'y':
+            if (e.ctrlKey) {
+              cells.redo()
+            }
+            e.preventDefault() // prevent default so keypress will not be triggered
+            return {state, cells}
+        }
+
+        // moving selected cell (without shift, so move the 'selected', not the entire selection)
+        if (state.selected) {
           let old = cells.getByName(state.selected)
           var newSelected
           switch (keyName) {
@@ -161,20 +179,6 @@ function modifications (actions) {
                 }
               }
               break
-            case 'z':
-              if (e.ctrlKey) {
-                if (e.shiftKey) {
-                  cells.redo()
-                } else {
-                  cells.undo()
-                }
-              }
-              return {state, cells}
-            case 'y':
-              if (e.ctrlKey) {
-                cells.redo()
-              }
-              return {state, cells}
             default: return {state, cells}
           }
           state.selected = newSelected.name
@@ -189,8 +193,7 @@ function modifications (actions) {
             state.areaSelect = {}
           }
 
-          // prevent default so keypress will not be triggered
-          e.preventDefault()
+          e.preventDefault() // prevent default so keypress will not be triggered
         }
         return {state, cells}
       }),
@@ -553,8 +556,27 @@ function modifications (actions) {
       })
       .delay(1),
 
-    actions.modifySelection$
-      .map(([keyName, e]) => function modifySelectionMod (state, cells) {
+    actions.keyCommandWithShift$
+      .map(([keyName, e]) => function keyCommandWithShiftMod (state, cells) {
+        // first try some general keybindings
+        var matched = false
+        switch (keyName) {
+          case 'z':
+            if (e.ctrlKey) {
+              cells.redo()
+              matched = true
+            }
+            break
+        }
+
+        if (matched) {
+          // prevent default so keypress will not be triggered
+          e.preventDefault()
+
+          return {state, cells}
+        }
+        // if nothing matches, proceed to general selection modifications
+
         // if there's not a selected area, start it now
         if (!state.areaSelect.start && state.selected) {
           let startAt = cells.getByName(state.selected)
