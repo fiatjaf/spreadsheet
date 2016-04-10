@@ -2,7 +2,7 @@ import Rx from 'rx'
 import keycode from 'keycode'
 import extend from 'deep-extend'
 
-import Grid, { cellInRange, between } from './grid'
+import { cellInRange, between } from './grid'
 import { handleValueGenerator } from './handle-drag'
 import {vrender} from './vrender'
 
@@ -700,7 +700,7 @@ export default function app ({
   DOM,
   COPYPASTE,
   INJECT,
-  CELLS: cells$ = Rx.Observable.just(new Grid(6, 6)).shareReplay(1),
+  CELLS: cells$,
   STATE: state$ = Rx.Observable.just(null)
     .map(state => extend({areaSelect: {}, handleDrag: {}}, state || {}))
     .shareReplay(1),

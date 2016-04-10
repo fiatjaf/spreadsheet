@@ -3,8 +3,12 @@ import Grid from './grid'
 
 module.exports = makeCellsDriver
 
-function makeCellsDriver (w, h) {
-  return () =>
-    Rx.Observable.just(new Grid(w, h))
-      .shareReplay(1)
+function makeCellsDriver (w = 6, h = 6) {
+  const grid = new Grid(w, h)
+  let grid$ = Rx.Observable.just(grid)
+    .shareReplay(1)
+
+  return function (cells$) {
+    return grid$
+  }
 }
