@@ -1,4 +1,5 @@
 import {h} from '@cycle/dom'
+import Letters from 'letters'
 
 import { cellInRange } from './grid'
 import { cellInHandleDrag } from './handle-drag'
@@ -21,8 +22,12 @@ export const vrender = {
   main: function (state, cells) {
     return h('main', [
       vrender.top(state, cells),
-      h('div.sheet', cells.byRowColumn.map((row, i) =>
-        thunk.row(i, vrender.row, state, row, cells.rowRev[i])
+      h('div.sheet', [
+        thunk.rowStatic('_', vrender.rowStatic, cells.byRowColumn[0].length)
+      ].concat(
+        cells.byRowColumn.map((row, i) =>
+          thunk.row(i, vrender.row, state, row, cells.rowRev[i], i)
+        )
       ))
     ])
   },
@@ -35,10 +40,19 @@ export const vrender = {
       })
     ])
   },
-  row: function (state, row) {
-    return h('div.row',
+  rowStatic: (ncolumns) => {
+    var letters = new Letters()
+    var cells = [vrender.cellStatic('')]
+    for (let i = 0; i < ncolumns; i++) {
+      cells.push(vrender.cellStatic(letters.next().toUpperCase()))
+    }
+    return h('div.row.static', cells)
+  },
+  cellStatic: label => h('div.cell.static', [label]),
+  row: function (state, row, _, rowIndex) {
+    return h('div.row', [vrender.cellStatic(rowIndex + 1)].concat(
       row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev))
-    )
+    ))
   },
   cell: function (state, cell) {
     var classes = []
@@ -101,5 +115,6 @@ export const thunk = {
   }),
   cell: partial(function ([currState, currCell, currCellRev], [nextState, nextCell, nextCellRev]) {
     return currCellRev === nextCellRev
-  })
+  }),
+  rowStatic: partial(([ncolumns], [ncolumnsBefore]) => ncolumns === ncolumnsBefore)
 }
