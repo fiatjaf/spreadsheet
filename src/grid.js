@@ -108,7 +108,7 @@ class Grid {
 
   unsetHandle () {
     let old = this._currentHandle
-    if (old) {
+    if (old && old.handle) {
       old.handle = false
       this.bumpCell(old)
     }

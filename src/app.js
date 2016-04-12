@@ -710,6 +710,7 @@ export default function app ({
   let actions = intent(DOM, COPYPASTE, INJECT, keydown$, keypress$)
 
   let mod$ = modifications(actions)
+    .share()
     .startWith((state, cells) => ({state, cells}))
 
   let signal$ = Rx.Observable.combineLatest(
@@ -744,10 +745,9 @@ export default function app ({
                 cells.setHandle(last)
                 return {state, cells}
               }
-            } else {
-              cells.unsetHandle()
-              return {state, cells}
             }
+            cells.unsetHandle()
+            return {state, cells}
           })
           .filter(x => x)
       )
