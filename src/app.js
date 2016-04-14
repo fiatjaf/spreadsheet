@@ -7,10 +7,10 @@ import { handleValueGenerator } from './handle-drag'
 import {vrender} from './vrender'
 
 function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
-  let cellClick$ = DOM.select('.cell:not(.editing)').events('click')
+  let cellClick$ = DOM.select('.cell.dyn:not(.editing)').events('click')
     .filter(e => e.target === e.ownerTarget)
-  let cellInput$ = DOM.select('.cell.editing input').events('input')
-  let cellBlur$ = DOM.select('.cell.editing').events('blur')
+  let cellInput$ = DOM.select('.cell.dyn.editing input').events('input')
+  let cellBlur$ = DOM.select('.cell.dyn.editing').events('blur')
 
   let bufferedCellClick$ = cellClick$
     .map(e => e.ownerTarget.dataset.name)
@@ -21,10 +21,10 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let topClick$ = DOM.select('.top input').events('click')
   let topBlur$ = DOM.select('.top input').events('blur')
 
-  let cellMouseDown$ = DOM.select('.cell:not(.editing)').events('mousedown')
+  let cellMouseDown$ = DOM.select('.cell.dyn:not(.editing)').events('mousedown')
     .filter(e => e.target === e.ownerTarget)
-  let cellMouseEnter$ = DOM.select('.cell:not(.editing)').events('mouseenter')
-  let cellMouseUp$ = DOM.select('.cell:not(.editing)').events('mouseup')
+  let cellMouseEnter$ = DOM.select('.cell.dyn:not(.editing)').events('mouseenter')
+  let cellMouseUp$ = DOM.select('.cell.dyn:not(.editing)').events('mouseup')
 
   // "handle" is not a verb, but that small box that stands at the side of the cell.
   let handleMouseDown$ = DOM.select('.handle').events('mousedown')
@@ -757,7 +757,7 @@ export default function app ({
   let inject$ = actions.cellMouseUp$
     .withLatestFrom(
       signal$,
-      DOM.select('.top.editing input, .cell.editing input').observable,
+      DOM.select('.top.editing input, .cell.dyn.editing input').observable,
       (_, {state, cells}, inputs) => {
         if (state.editing && state.currentInput[0] === '=') {
           return {
@@ -832,7 +832,7 @@ export default function app ({
       startedAt: e.clientY,
       pos: e.ownerTarget.classList.item(1)
     })),
-    DOM.select('.sheet').events('mouseup').map({resizing: false}).do(() => console.log('mouseup'))
+    DOM.select('.sheet').events('mouseup').map({resizing: false})
   ).startWith({resizing: false})
 
   let resize$ = DOM.select('.static').events('mousemove')
@@ -865,7 +865,7 @@ export default function app ({
     DOM: vtree$,
     COPYPASTE: valuesToCopy$,
     INJECT: inject$,
-    ADAPTWIDTH: DOM.select('.cell.editing input').observable
+    ADAPTWIDTH: DOM.select('.cell.dyn.editing input').observable
       .filter(inputs => inputs.length)
       .map(inputs => inputs[0]),
     CSS: resize$,

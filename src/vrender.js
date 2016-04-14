@@ -95,18 +95,18 @@ export const vrender = {
     }
 
     if (cell.name !== state.editing) {
-      return h('div.cell', {
+      return h('.cell.dyn', {
         className: cn,
         dataset: cd
       }, [
         cell.calc === null ? cell.raw : cell.calc,
-        cell.handle ? h('div.handle', {innerHTML: '&#8203;'}) : null
+        cell.handle ? h('.handle', {innerHTML: '&#8203;'}) : null
       ])
     } else {
       let raw = state.currentInput // if this is not set, then it is a bug.
                                    // we cannot simply use `cell.raw` here
 
-      return h('div.cell.editing', {
+      return h('.cell.dyn.editing', {
         className: cn,
         dataset: cd
       }, h('input', {
