@@ -42,15 +42,27 @@ export const vrender = {
   },
   rowStatic: (ncolumns) => {
     var letters = new Letters()
-    var cells = [vrender.cellStatic('')]
-    for (let i = 0; i < ncolumns; i++) {
-      cells.push(vrender.cellStatic(letters.next().toUpperCase()))
+    var cells = [vrender.cellStatic('', 'top left', 0)]
+    for (let i = 1; i < ncolumns + 1; i++) {
+      cells.push(vrender.cellStatic(
+        letters.next().toUpperCase(),
+        'top',
+        i
+      ))
     }
     return h('div.row.static', cells)
   },
-  cellStatic: label => h('div.cell.static', [label]),
+  cellStatic: (label, location, index) => h('div.cell.static', {
+    key: label,
+    className: location,
+    dataset: { index: index + 1 }
+  }, [
+    h('span.resizer.first', '|'),
+    label,
+    h('span.resizer.last', '|')
+  ]),
   row: function (state, row, _, rowIndex) {
-    return h('div.row', [vrender.cellStatic(rowIndex + 1)].concat(
+    return h('div.row', [vrender.cellStatic(rowIndex + 1, 'left', rowIndex + 1)].concat(
       row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev))
     ))
   },

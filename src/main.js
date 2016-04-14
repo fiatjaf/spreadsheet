@@ -3,6 +3,7 @@ import Cycle from '@cycle/core'
 import {makeDOMDriver} from '@cycle/dom'
 import {restart, restartable} from 'cycle-restart'
 
+const customCSSDriver = require('./custom-css-driver')
 const makeCellsDriver = require('./cells-driver')
 const makeCopyPasteDriver = require('./copy-paste-driver')
 const makeInjectCellDriver = require('./inject-cell-driver')
@@ -18,6 +19,7 @@ const drivers = {
   INJECT: makeInjectCellDriver(),
   CELLS: makeCellsDriver(10, 10),
   ADAPTWIDTH: makeAdaptWidthDriver(),
+  CSS: customCSSDriver,
   keydown: () => keydown$.share(),
   keypress: () => keypress$.share()
 }

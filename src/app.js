@@ -813,6 +813,51 @@ export default function app ({
       }
     )
 
+  let resizerTop = DOM.select('.static.top .resizer')
+  let resizerLeft = DOM.select('.static.left .resizer')
+  let resizeState$ = Rx.Observable.merge(
+    resizerTop.events('mousedown').map(e => ({
+      resizing: true,
+      type: 'resize-column',
+      index: e.ownerTarget.parentNode.dataset.index,
+      currentSize: e.ownerTarget.parentNode.offsetWidth,
+      startedAt: e.clientX,
+      pos: e.ownerTarget.classList.item(1)
+    })),
+    resizerLeft.events('mousedown').map(e => ({
+      resizing: true,
+      type: 'resize-row',
+      index: e.ownerTarget.parentNode.dataset.index,
+      currentSize: e.ownerTarget.parentNode.offsetHeight,
+      startedAt: e.clientY,
+      pos: e.ownerTarget.classList.item(1)
+    })),
+    DOM.select('.sheet').events('mouseup').map({resizing: false}).do(() => console.log('mouseup'))
+  ).startWith({resizing: false})
+
+  let resize$ = DOM.select('.static').events('mousemove')
+    .withLatestFrom(
+      resizeState$,
+      (e, {resizing, type, index, currentSize, startedAt, pos}) => {
+        if (!resizing || !document.querySelectorAll('*:active').length) return
+
+        var mod = { type, index, size: 0 }
+        var endedAt
+
+        if (type === 'resize-row') endedAt = e.clientY
+        else endedAt = e.clientX
+
+        if (pos === 'first') mod.size = currentSize + (startedAt - endedAt)
+        else mod.size = currentSize + (endedAt - startedAt)
+
+        if (mod.size <= 20) mod.size = 20
+        if (mod.size >= 400) mod.size = 400
+
+        return mod
+      }
+    )
+    .filter(m => m)
+
   let vtree$ = signal$
     .map(({state, cells}) => vrender.main(state, cells))
 
@@ -823,7 +868,7 @@ export default function app ({
     ADAPTWIDTH: DOM.select('.cell.editing input').observable
       .filter(inputs => inputs.length)
       .map(inputs => inputs[0]),
-    STATE: state$,
-    CELLS: cells$
+    CSS: resize$,
+    signal$ // this is just useful for other cycle components instantiating this
   }
 }

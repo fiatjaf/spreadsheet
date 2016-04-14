@@ -32,54 +32,79 @@ $cellBorder = #438EC3
     &:last-child .cell
       border-bottom-width 2px
   
-    div.cell
-      position relative
-      display inline-block
-      white-space normal
-      font-size 1.2em
-      padding 2px 0.2em 0 0.2em
-      margin 0 0 -4px 0
-      overflow hidden
-      width 60px
-      height 26px
-      border 1px solid $cellBorder
+  div.cell
+    position relative
+    display inline-block
+    white-space normal
+    font-size 1.2em
+    padding 2px 0.2em 0 0.2em
+    margin 0 0 -4px 0
+    overflow hidden
+    width 60px
+    height 26px
+    border 1px solid $cellBorder
   
-      &:first-child
-        clear both
-        border-left-width 2px
+    &:first-child
+      clear both
+      border-left-width 2px
 
-      &:last-child
-        border-right-width 2px
+    &:last-child
+      border-right-width 2px
   
-      &.selected
-        border-color rgb(236, 114, 67)
-        background-color rgba(236, 114, 67, 0.1)
-        border-width 1.5px
+    &.selected
+      border-color rgb(236, 114, 67)
+      background-color rgba(236, 114, 67, 0.1)
+      border-width 1.5px
   
-      &.editing
-        padding 0
+    &.editing
+      padding 0
   
-        input
-          padding 2px 0.2em 0 0.2em
-          background-color rgba(245, 119, 38, 0.3)
-          width inherit
-          height inherit
-          border none
-          outline none
-          display block
-          position absolute
+      input
+        padding 2px 0.2em 0 0.2em
+        background-color rgba(245, 119, 38, 0.3)
+        width inherit
+        height inherit
+        border none
+        outline none
+        display block
+        position absolute
   
-      &.selectArea
-        background-color rgba(100, 100, 100, 0.2)
-      &.handleArea:not(.selectArea):not(.selected)
-        background-color rgba(0, 211 , 113, 0.3)
+    &.selectArea
+      background-color rgba(100, 100, 100, 0.2)
+    &.handleArea:not(.selectArea):not(.selected)
+      background-color rgba(0, 211 , 113, 0.3)
   
-      &.formulaerror
-        background-color #EBD4A1
-      &.calcerror
-        background-color #FFACAC
-      &.calculating
-        background-color #A1CAEB
+    &.formulaerror
+      background-color #EBD4A1
+    &.calcerror
+      background-color #FFACAC
+    &.calculating
+      background-color #A1CAEB
+
+  .cell.static
+    .resizer
+      display inline
+      position absolute
+      opacity 0
+
+    &.top .resizer
+      cursor col-resize
+      height 100%
+      width 4px
+      top 0
+      &.first
+        left 1px
+      &.last
+        right 1px
+    &.left .resizer
+      cursor row-resize
+      height 4px
+      width 100%
+      left 0
+      &.first
+        top 1px
+      &.last
+        bottom 1px
 
 .handle
   width 5px
