@@ -35,6 +35,8 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
     if (isMac) e.ctrlKey = e.metaKey
   })
 
+  let staticClick$ = DOM.select('.cell.static').events('click')
+
   let editingKeydown$ = keydown$
     .filter(e => e.target.tagName === 'INPUT')
     .map(e => [keycode(e), e])
@@ -57,6 +59,12 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
       .map(e => e.ownerTarget.value),
     injected$: INJECT.updated$,
     cellBlur$,
+    staticClick$: staticClick$
+      .map(e => ({
+        row: e.ownerTarget.classList.contains('left'),
+        column: e.ownerTarget.classList.contains('top'),
+        index: parseInt(e.ownerTarget.dataset.index, 0) - 2
+      })),
     cellMouseDown$: cellMouseDown$.map(e => e.ownerTarget.dataset.name),
     cellMouseEnter$: cellMouseEnter$.map(e => e.ownerTarget.dataset.name),
     cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.dataset.name),
@@ -390,6 +398,27 @@ function modifications (actions) {
         }
         cells.bumpCell(cell)
 
+        return {state, cells}
+      }),
+
+    actions.staticClick$
+      .map(({row, column, index}) => function selectLineMod (state, cells) {
+        state.editing = false
+        state.areaSelecting = false
+
+        if (index === -1) { // select all
+          state.areaSelect.start = cells.getByRowColumn(0, 0)
+          state.areaSelect.end = cells.getByRowColumn(cells.numRows() - 1, cells.numColumns() - 1)
+        } else if (row) { // select row
+          state.areaSelect.start = cells.getByRowColumn(index, 0)
+          state.areaSelect.end = cells.getByRowColumn(index, cells.numColumns() - 1)
+        } else if (column) { // select column
+          state.areaSelect.start = cells.getByRowColumn(0, index)
+          state.areaSelect.end = cells.getByRowColumn(cells.numRows() - 1, index)
+        }
+        state.selected = state.areaSelect.start.name
+
+        cells.bumpAllCells()
         return {state, cells}
       }),
 
