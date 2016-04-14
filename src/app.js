@@ -233,7 +233,7 @@ function modifications (actions) {
 
     actions.charEntered$
       .map(character => function startEditingFromCharEnteredMod (state, cells) {
-        if (state.selected && !state.editing && /[a-z0-9 ]/i.test(character)) {
+        if (state.selected && !state.editing) {
           let cell = cells.getByName(state.selected)
 
           // set the cell value and mark it as editing
