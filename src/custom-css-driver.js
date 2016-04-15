@@ -1,4 +1,6 @@
-module.exports = customCSSDriver
+import extend from 'xtend'
+
+module.exports = makeCustomCSSDriver
 
 /* this just controls the custom <style> element with the
    sheet columns and row sizes as edited by the user. */
@@ -7,20 +9,31 @@ var rules = {columns: {}, rows: {}}
 var style = document.createElement('style')
 document.head.appendChild(style)
 
-function customCSSDriver (mod$) {
-  mod$.subscribe(mod => {
-    let { type } = mod
-    switch (type) {
-      case 'resize-row':
-        rules.rows[mod.index] = mod.size
-        break
-      case 'resize-column':
-        rules.columns[mod.index] = mod.size
-        break
-    }
+function makeCustomCSSDriver (initialRules) {
+  rules = extend(rules, initialRules)
 
+  return function customCSSDriver (mod$) {
+    mod$.subscribe(mod => {
+      let { type } = mod
+      switch (type) {
+        case 'resize-row':
+          rules.rows[mod.index] = mod.size
+          break
+        case 'resize-column':
+          rules.columns[mod.index] = mod.size
+          break
+      }
+
+      style.innerHTML = render(rules)
+    })
+
+    // initial apply
     style.innerHTML = render(rules)
-  })
+
+    return {
+      currentRules () { return rules }
+    }
+  }
 }
 
 function render (rules) {
