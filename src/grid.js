@@ -21,6 +21,9 @@ class Grid {
   resetGrid (width, height) {
     this.letters = new Letters() // this is lowercase
 
+    this.byName = {}
+    this.byRowColumn = []
+
     for (let col = 0; col < width; col++) {
       let letter = this.letters.next()
 
@@ -46,8 +49,19 @@ class Grid {
     }
   }
 
+  resizeGrid (width, height) {
+    var oldByName = this.byName
+
+    this.resetGrid(width, height)
+
+    for (let cellName in oldByName) {
+      let cell = this.getByName(cellName)
+      if (cell) this._set(cell, oldByName[cellName].raw)
+    }
+  }
+
   _set (cell, value) {
-    cell.raw = value.trim()
+    cell.raw = value
     this.calc(cell, true)
     this.bumpCell(cell)
   }
@@ -58,7 +72,7 @@ class Grid {
     let count = this._undoStack.push({[cell.name]: cell.raw})
     if (count > 100) this._undoStack.shift()
 
-    this._set(cell, value)
+    this._set(cell, value.trim())
   }
 
   setMany (cellObjects, rawValues) {
@@ -117,13 +131,16 @@ class Grid {
   setHandle (cell) {
     this.unsetHandle()
 
-    cell.handle = true
-    this._currentHandle = cell
-    this.bumpCell(cell)
+    try {
+      cell.handle = true
+      this._currentHandle = cell
+      this.bumpCell(cell)
+    } catch (e) {
+      // maybe we were passed an undefined cell
+    }
   }
 
-  recalc (name) {
-    let cell = this.byName[name]
+  recalc (cell) {
     this.calc(cell, false)
     this.bumpCell(cell)
   }
@@ -188,7 +205,11 @@ class Grid {
   }
 
   numColumns () {
-    return this.byRowColumn[0].length
+    try {
+      return this.byRowColumn[0].length
+    } catch (e) {
+      return 0
+    }
   }
 
   getNextUp (cell) {

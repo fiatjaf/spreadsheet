@@ -18,9 +18,12 @@ export default function calc (cell, changed) {
   // if this cell has some other depending on it,
   // mark it to recalc
   for (let dependent in graph.inadj(cell.name)) {
-    cell.calc = CALCULATING
-    this.bumpCell(cell)
-    setTimeout(() => this.recalc(dependent), 1)
+    let depCell = this.getByName(dependent)
+    if (depCell) {
+      depCell.calc = CALCULATING
+      this.bumpCell(depCell)
+      setTimeout(() => this.recalc(depCell), 1)
+    }
   }
 
   if (cell.raw.substr(0, 1) === '=' && cell.raw.length > 1) {

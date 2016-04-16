@@ -38,7 +38,8 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let staticClick$ = DOM.select('.cell.static').events('click')
 
   let editingKeydown$ = keydown$
-    .filter(e => e.target.tagName === 'INPUT')
+    .filter(e => e.target.tagName === 'INPUT' &&
+                 e.target.parentNode.classList.contains('editing'))
     .map(e => [keycode(e), e])
   let keyCommand$ = keydown$
     .filter(e => e.target.tagName !== 'INPUT')
@@ -861,7 +862,7 @@ export default function app ({
       startedAt: e.clientY,
       pos: e.ownerTarget.classList.item(1)
     })),
-    DOM.select('.sheet').events('mouseup').map({resizing: false})
+    DOM.select('.sheet-container').events('mouseup').map({resizing: false})
   ).startWith({resizing: false})
 
   let resize$ = DOM.select('.static').events('mousemove')

@@ -20,10 +20,10 @@ FocusHook.prototype.hook = function hook (element) {
 
 export const vrender = {
   main: function (state, cells) {
-    return h('main', [
+    return h('main.sheet-container', [
       vrender.top(state, cells),
       h('div.sheet', [
-        thunk.rowStatic('_', vrender.rowStatic, cells.byRowColumn[0].length)
+        thunk.rowStatic('_', vrender.rowStatic, cells.numColumns())
       ].concat(
         cells.byRowColumn.map((row, i) =>
           thunk.row(i, vrender.row, state, row, cells.rowRev[i], i)
