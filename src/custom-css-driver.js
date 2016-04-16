@@ -9,30 +9,35 @@ var rules = {columns: {}, rows: {}}
 var style = document.createElement('style')
 document.head.appendChild(style)
 
-function makeCustomCSSDriver (initialRules) {
+function makeCustomCSSDriver (initialRules = {}) {
   rules = extend(rules, initialRules)
 
   return function customCSSDriver (mod$) {
-    mod$.subscribe(mod => {
-      let { type } = mod
-      switch (type) {
-        case 'resize-row':
-          rules.rows[mod.index] = mod.size
-          break
-        case 'resize-column':
-          rules.columns[mod.index] = mod.size
-          break
-      }
-
-      style.innerHTML = render(rules)
-    })
-
     // initial apply
     style.innerHTML = render(rules)
 
-    return {
-      currentRules () { return rules }
-    }
+    return mod$
+      .map(mod => {
+        // update rules
+        let { type } = mod
+        switch (type) {
+          case 'rules':
+            rules = extend(rules, mod.rules)
+            break
+          case 'resize-row':
+            rules.rows[mod.index] = mod.size
+            break
+          case 'resize-column':
+            rules.columns[mod.index] = mod.size
+            break
+        }
+
+        style.innerHTML = render(rules)
+
+        return rules /* expose updated rules */
+      })
+      .share() /* because maybe no one is listening to this
+                  but we still have to update the CSS. */
   }
 }
 
