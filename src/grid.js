@@ -218,6 +218,18 @@ class Grid {
       cell.column === 0 ? 0 : cell.column - 1
     )
   }
+
+  exportToArray () {
+    var a = []
+    for (let r = 0; r < this.byRowColumn.length; r++) {
+      var aa = []
+      for (let c = 0; c < this.byRowColumn[r].length; c++) {
+        aa.push(this.byRowColumn[r][c].raw)
+      }
+      a.push(aa)
+    }
+    return a
+  }
 }
 
 export const between = (n, a, b) => a < b ? (a <= n) && (n <= b) : (b <= n) && (n <= a)
