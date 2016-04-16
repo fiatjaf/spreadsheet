@@ -12,7 +12,7 @@ function makeAdaptWidthDriver () {
 }
 
 function adaptWidth (input) {
-  if (input.offsetWidth < input.scrollWidth) {
+  if (input.offsetWidth < input.scrollWidth && parent) {
     input.style.width = (input.scrollWidth + 2) + 'px'
   }
 }

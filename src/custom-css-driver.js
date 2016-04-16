@@ -39,10 +39,24 @@ function makeCustomCSSDriver (initialRules) {
 function render (rules) {
   var css = ''
   for (let index in rules.rows) {
-    css += `.row:nth-child(${index}) .cell { height: ${rules.rows[index]}px !important; }\n`
+    css += `.row:nth-child(${index}) .cell {
+      height: ${rules.rows[index]}px !important;
+    }`
+    if (rules.rows[index] > 40) {
+      css += `.row:nth-child(${index}) input {
+        word-break: break-word !important;
+      }`
+    }
   }
   for (let index in rules.columns) {
-    css += `.cell:nth-child(${index}) { width: ${rules.columns[index]}px !important; }\n`
+    css += `.cell:nth-child(${index}) {
+      width: ${rules.columns[index]}px !important;
+    }`
+    if (rules.columns[index] < 82) {
+      css += `.cell:nth-child(${index}) input {
+        word-break: normal !important;
+      }`
+    }
   }
   return css
 }

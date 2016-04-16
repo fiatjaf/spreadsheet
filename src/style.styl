@@ -36,13 +36,15 @@ $cellBorder = #438EC3
     position relative
     display inline-block
     white-space normal
-    font-size 1.2em
+    font-size 1em
+    word-break break-word
     padding 2px 0.2em 0 0.2em
     margin 0 0 -4px 0
     overflow hidden
     width 60px
     height 26px
     border 1px solid $cellBorder
+    z-index 1
   
     &:first-child
       clear both
@@ -58,16 +60,19 @@ $cellBorder = #438EC3
   
     &.editing
       padding 0
+      overflow visible
+      z-index 2
   
-      input
-        padding 2px 0.2em 0 0.2em
-        background-color rgba(245, 119, 38, 0.3)
-        width inherit
-        height inherit
-        border none
-        outline none
-        display block
-        position absolute
+    input
+      padding 2px 0.2em 0 0.2em
+      background-color rgba(245, 119, 38, 0.3)
+      width inherit
+      height inherit
+      border none
+      word-break normal
+      outline none
+      display block
+      position absolute
   
     &.selectArea
       background-color rgba(100, 100, 100, 0.2)
