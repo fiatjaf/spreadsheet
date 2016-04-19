@@ -1,5 +1,5 @@
 import Rx from 'rx'
-import Grid from './grid'
+import Grid from '../grid'
 
 module.exports = makeCellsDriver
 

@@ -15,8 +15,8 @@ export default function calc (cell, changed) {
     }
   }
 
-  // if this cell has some other depending on it,
-  // mark it to recalc
+  // if this cell has some others depending on it,
+  // mark them to recalc
   for (let dependent in graph.inadj(cell.name)) {
     let depCell = this.getByName(dependent)
     if (depCell) {

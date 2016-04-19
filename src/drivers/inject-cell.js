@@ -1,4 +1,4 @@
-import formulaParser from '../lib/formula-parser'
+import formulaParser from '../../lib/formula-parser'
 
 module.exports = makeInjectCellDriver
 

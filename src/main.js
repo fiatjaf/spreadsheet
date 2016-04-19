@@ -3,11 +3,11 @@ import Cycle from '@cycle/core'
 import {makeDOMDriver} from '@cycle/dom'
 import {restart, restartable} from 'cycle-restart'
 
-const makeCustomCSSDriver = require('./custom-css-driver')
-const makeCellsDriver = require('./cells-driver')
-const makeCopyPasteDriver = require('./copy-paste-driver')
-const makeInjectCellDriver = require('./inject-cell-driver')
-const makeAdaptWidthDriver = require('./adapt-width-driver')
+const makeCustomCSSDriver = require('./drivers/custom-css')
+const makeCellsDriver = require('./drivers/cells')
+const makeCopyPasteDriver = require('./drivers/copy-paste')
+const makeInjectCellDriver = require('./drivers/inject-cell')
+const makeAdaptWidthDriver = require('./drivers/adapt-width')
 var app = require('./app').default
 
 let keydown$ = Rx.Observable.fromEvent(document, 'keydown')
