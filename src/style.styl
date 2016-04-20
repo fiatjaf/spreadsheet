@@ -1,4 +1,11 @@
-$cellBorder = #438EC3
+$default-cell-border = #438EC3
+$default-selected-border-color = rgb(236, 114, 67)
+$default-dependency-border-color = #f5f582
+$default-input-background-color = rgba(245, 119, 38, 0.3)
+$default-selectarea-background-color = rgba(100, 100, 100, 0.2)
+$default-handle-area-background-color = rgba(0, 211 , 113, 0.3)
+
+@import './themes'
 
 #spreadsheet
   text-align center
@@ -43,7 +50,8 @@ $cellBorder = #438EC3
     overflow hidden
     width 60px
     height 26px
-    border 1px solid $cellBorder
+    border 1px solid $default-cell-border
+    border-color var(--cell-border)
     z-index 1
   
     &:first-child
@@ -54,12 +62,15 @@ $cellBorder = #438EC3
       border-right-width 2px
   
     &.selected
-      border-color rgb(236, 114, 67)
-      background-color rgba(236, 114, 67, 0.1)
-      border-width 2px
+      border-color $default-selected-border-color
+      background-color alpha($default-selected-border-color, 0.1)
+      border-color var(--selected-border-color)
+      background-color var(--selected-background-color)
+      border-width 1.5px
 
     &.dependency
-      border-color #f5f582
+      border-color $default-dependency-border-color
+      border-color var(--dependency-border-color)
       border-width 1.5px
   
     &.editing
@@ -69,7 +80,8 @@ $cellBorder = #438EC3
   
     input
       padding 2px 0.2em 0 0.2em
-      background-color rgba(245, 119, 38, 0.3)
+      background-color $default-input-background-color
+      background-color var(--input-background-color)
       width inherit
       height inherit
       border none
@@ -79,9 +91,11 @@ $cellBorder = #438EC3
       position absolute
   
     &.selectArea
-      background-color rgba(100, 100, 100, 0.2)
+      background-color $default-selectarea-background-color
+      background-color var(--selectarea-background-color)
     &.handleArea:not(.selectArea):not(.selected)
-      background-color rgba(0, 211 , 113, 0.3)
+      background-color $default-handlearea-background-color
+      background-color var(--handlearea-background-color)
   
     &.formulaerror
       background-color #EBD4A1
@@ -121,7 +135,8 @@ $cellBorder = #438EC3
   position absolute
   bottom 0
   right 0
-  background-color darken($cellBorder, 10)
+  background-color darken($default-cell-border, 10)
+  background-color var(--dark-cell-border)
   
 .copy-paste
   display block
