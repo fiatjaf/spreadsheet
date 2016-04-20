@@ -8,6 +8,7 @@ const makeCellsDriver = require('./drivers/cells')
 const makeCopyPasteDriver = require('./drivers/copy-paste')
 const makeInjectCellDriver = require('./drivers/inject-cell')
 const makeAdaptWidthDriver = require('./drivers/adapt-width')
+const updatedStateDriver = require('./drivers/updated-state')
 var app = require('./app').default
 
 let keydown$ = Rx.Observable.fromEvent(document, 'keydown')
@@ -19,6 +20,7 @@ const drivers = {
   INJECT: makeInjectCellDriver(),
   CELLS: makeCellsDriver(10, 10),
   ADAPTWIDTH: makeAdaptWidthDriver(),
+  UPDATED: updatedStateDriver,
   CSS: makeCustomCSSDriver({columns: {'3': 80}, rows: {'4': 40}}),
   keydown: () => keydown$.share(),
   keypress: () => keypress$.share()

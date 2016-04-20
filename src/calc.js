@@ -1,9 +1,27 @@
 import Graph from 'beirada'
-import functions from 'formulajs'
+import formulajs from 'formulajs'
+import * as Promise from 'bluebird'
 
 import formulaParser from '../lib/formula-parser'
 import {renderParsedFormula} from './helpers'
 import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
+
+import {notify} from './drivers/updated-state'
+
+/* setup functions: all functions return promises */
+var functions = {}
+
+// formulajs (excel) functions
+for (let name in formulajs) {
+  let fn = formulajs[name]
+  functions[name] = function () {
+    return Promise.resolve().then(() => fn.apply(null, arguments))
+  }
+}
+
+// a simple json http function
+functions['GET'] = (url) => window.fetch(url).then(res => res.text())
+functions['GETJSON'] = (url) => window.fetch(url).then(res => res.json())
 
 const graph = new Graph()
 
@@ -40,40 +58,50 @@ export default function calc (cell, changed) {
       cell.calc = FORMULAERROR
       return
     }
-    try {
-      cell.calc = calcExpr(expr, cell, this)
-    } catch (e) {
-      cell.calc = CALCERROR
-    }
+
+    // calcExpr returns a promise
+    calcExpr.call(this, expr, cell)
+      .then(res => cell.calc = res)
+      .catch(() => cell.calc = CALCERROR)
+      .then(() => {
+        this.bumpCell(cell)
+        notify()
+      })
+      // we're done with this cell.
+      // the driver will be notified and ensure the vtree is regenerated.
+
+    cell.calc = CALCULATING
   } else {
     cell.calc = cell.raw
   }
 }
 
-function calcExpr (expr, cell, cells) {
+function calcExpr (expr, cell) {
   switch (expr.type) {
     case 'number':
     case 'string':
-      return expr.value
+      return Promise.resolve(expr.value)
     case 'cell':
       graph.dir(cell.name, expr.name) /* track cell dependency */
-      return cells.getByName(expr.name).calc
+      return Promise.resolve(this.getByName(expr.name).calc)
     case 'range':
-      let inRange = cells.getCellsInRange({
-        start: cells.getByName(expr.start),
-        end: cells.getByName(expr.end)
+      let inRange = this.getCellsInRange({
+        start: this.getByName(expr.start),
+        end: this.getByName(expr.end)
       })
       var values = []
       inRange.forEach(irc => {
         graph.dir(cell.name, irc.name) /* track cell dependency */
         values.push(irc.calc)
       })
-      return values
+      return Promise.resolve(values)
     case 'function':
-      return functions[expr.fn].apply(null,
+      // in this case we have an array of promises
+      // returned by the child calcExprs.
+      return Promise.all(
         expr.arguments
-        .filter(arg => arg.type !== 'empty')
-        .map(arg => calcExpr(arg, cell, cells))
-      )
+          .filter(arg => arg.type !== 'empty')
+          .map(arg => calcExpr.call(this, arg, cell))
+      ).then(args => functions[expr.fn].apply(null, args))
   }
 }

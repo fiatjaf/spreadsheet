@@ -6,6 +6,7 @@
     "@cycle/core": "6.0.0",
     "@cycle/dom": "9.0.2",
     "beirada": "^0.1.2",
+    "bluebird": "^3.3.5",
     "cycle-restart": "0.0.9",
     "deep-extend": "^0.4.1",
     "formulajs": "fiatjaf/formula.js",

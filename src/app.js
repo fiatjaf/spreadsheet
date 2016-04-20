@@ -12,6 +12,7 @@ export default function app ({
   STATE: state$ = Rx.Observable.just(null)
     .map(state => extend({areaSelect: {}, handleDrag: {}}, state || {}))
     .shareReplay(1),
+  UPDATED,
   keydown: keydown$,
   keypress: keypress$
 }) {
@@ -165,6 +166,8 @@ export default function app ({
       }
     )
     .filter(m => m)
+
+  signal$ = signal$.combineLatest(UPDATED, signal => signal)
 
   let vtree$ = signal$
     .map(({state, cells}) => vrender.main(state, cells))

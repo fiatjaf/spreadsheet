@@ -99,7 +99,7 @@ export const vrender = {
         className: cn,
         dataset: cd
       }, [
-        cell.calc === null ? cell.raw : cell.calc,
+        (cell.calc === null ? cell.raw : cell.calc).toString(),
         cell.handle ? h('.handle', {innerHTML: '&#8203;'}) : null
       ])
     } else {
