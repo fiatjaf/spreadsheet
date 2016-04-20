@@ -1,6 +1,7 @@
 import Rx from 'rx'
 import extend from 'deep-extend'
 
+import depGraph from './deps'
 import { vrender } from './vrender'
 import { intent, modifications } from './intent-and-mods'
 
@@ -10,18 +11,20 @@ export default function app ({
   INJECT,
   CELLS: cells$,
   STATE: state$ = Rx.Observable.just(null)
-    .map(state => extend({areaSelect: {}, handleDrag: {}}, state || {}))
+    .map(state => extend({areaSelect: {}, handleDrag: {}, dependencies: {}}, state || {}))
     .shareReplay(1),
   UPDATED,
   keydown: keydown$,
   keypress: keypress$
 }) {
+  /* this is where the real action happens */
   let actions = intent(DOM, COPYPASTE, INJECT, keydown$, keypress$)
 
   let mod$ = modifications(actions)
     .share()
     .startWith((state, cells) => ({state, cells}))
 
+  // now we'll have a signal, which contains {state, cells}, i.e., everything that matters.
   let signal$ = Rx.Observable.combineLatest(
     state$,
     cells$,
@@ -37,13 +40,17 @@ export default function app ({
     }
   )
     .flatMap(({state, cells}) => {
+      /* here we can do some delayed jobs that will emit another signal, derived from the current one
+         without affecting the responsiveness of the app.
+         at least that's what I'm trying to do.
+      */
       let o = Rx.Observable.just({state, cells})
 
       return o.concat(
         o
+          // delayed: set that handle (the little box in the corner of the selected cell)
           .delay(1)
           .map(({state, cells}) => {
-            // postpone setting handle
             if (!state.areaSelecting) {
               if (state.areaSelect.start) {
                 let last = cells.lastCellInRange(state.areaSelect)
@@ -58,7 +65,27 @@ export default function app ({
             cells.unsetHandle()
             return {state, cells}
           })
-          .filter(x => x)
+          .filter(x => x),
+        o
+          // delayed: show cells referenced by the current selected cell
+          .delay(1)
+          .map(({state, cells}) => {
+            // clean dependencies styling
+            for (let d in state.dependencies) {
+              delete state.dependencies[d]
+              cells.bumpCellByName(d)
+            }
+
+            let cellName = state.editing || state.selected
+            if (!cellName) return {state, cells}
+
+            // add new dependencies
+            for (let depCellName in depGraph.adj(cellName)) {
+              state.dependencies[depCellName] = true
+              cells.bumpCellByName(depCellName)
+            }
+            return {state, cells}
+          })
       )
     })
     .share()

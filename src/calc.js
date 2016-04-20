@@ -1,12 +1,12 @@
-import Graph from 'beirada'
 import formulajs from 'formulajs'
 import * as Promise from 'bluebird'
 
+import depGraph from './deps'
 import formulaParser from '../lib/formula-parser'
-import {renderParsedFormula} from './helpers'
-import {FORMULAERROR, CALCERROR, CALCULATING} from './const'
+import { renderParsedFormula } from './helpers'
+import { FORMULAERROR, CALCERROR, CALCULATING } from './const'
 
-import {notify} from './drivers/updated-state'
+import { notify } from './drivers/updated-state'
 
 /* setup functions: all functions return promises */
 var functions = {}
@@ -23,19 +23,17 @@ for (let name in formulajs) {
 functions['GET'] = (url) => window.fetch(url).then(res => res.text())
 functions['GETJSON'] = (url) => window.fetch(url).then(res => res.json())
 
-const graph = new Graph()
-
 export default function calc (cell, changed) {
   // remove all deps since the formula was changed
   if (changed) {
-    for (let dep in graph.adj(cell.name)) {
-      graph.deldir(cell.name, dep)
+    for (let dep in depGraph.adj(cell.name)) {
+      depGraph.deldir(cell.name, dep)
     }
   }
 
   // if this cell has some others depending on it,
   // mark them to recalc
-  for (let dependent in graph.inadj(cell.name)) {
+  for (let dependent in depGraph.inadj(cell.name)) {
     let depCell = this.getByName(dependent)
     if (depCell) {
       depCell.calc = CALCULATING
@@ -82,7 +80,7 @@ function calcExpr (expr, cell) {
     case 'string':
       return Promise.resolve(expr.value)
     case 'cell':
-      graph.dir(cell.name, expr.name) /* track cell dependency */
+      depGraph.dir(cell.name, expr.name) /* track cell dependency */
       return Promise.resolve(this.getByName(expr.name).calc)
     case 'range':
       let inRange = this.getCellsInRange({
@@ -91,7 +89,7 @@ function calcExpr (expr, cell) {
       })
       var values = []
       inRange.forEach(irc => {
-        graph.dir(cell.name, irc.name) /* track cell dependency */
+        depGraph.dir(cell.name, irc.name) /* track cell dependency */
         values.push(irc.calc)
       })
       return Promise.resolve(values)

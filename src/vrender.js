@@ -69,6 +69,7 @@ export const vrender = {
   cell: function (state, cell) {
     var classes = []
 
+    if (cell.name in state.dependencies) classes.push('dependency')
     if (state.selected === cell.name) classes.push('selected')
     if (state.areaSelect.start) {
       if (cellInRange(cell, state.areaSelect)) classes.push('selectArea')
