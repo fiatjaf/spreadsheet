@@ -6,18 +6,8 @@ function makeInjectCellDriver () {
   return function (inject$) {
     let updated$ = inject$
       .map(({injected, input}) => {
-        let isModernBrowser = (input.selectionStart && input.selectionEnd)
-
         // get the cursor position
-        var caretPos
-        if (isModernBrowser) {
-          caretPos = input.selectionStart
-        } else {
-          input.focus()
-          let range = document.selection.createRange()
-          range.moveStart('character', -input.value.length)
-          caretPos = range.text.length
-        }
+        let caretPos = input.selectionStart
 
         // we assume we are in a formula (starting with "=")
         var expr
@@ -55,15 +45,8 @@ function makeInjectCellDriver () {
         // input.dispatchEvent(event)
 
         // set the cursor to the right position (after the inserted argument)
-        if (isModernBrowser) {
-          input.selectionStart = start + injected.length
-          input.selectionEnd = start + injected.length
-        } else {
-          let range = document.selection.createRange()
-          range.moveStart('character', start)
-          range.moveEnd('character', end)
-          range.select()
-        }
+        input.selectionStart = start + injected.length
+        input.selectionEnd = start + injected.length
         input.focus()
 
         // this will be emitted by the driver so the app can update the state of the cell
