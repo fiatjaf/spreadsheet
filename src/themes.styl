@@ -1,3 +1,21 @@
+$default-cell-border = #438EC3
+$default-selected-border-color = rgb(236, 114, 67)
+$default-dependency-border-color = #f5f582
+$default-input-background-color = rgba(245, 119, 38, 0.3)
+$default-selectarea-background-color = rgba(100, 100, 100, 0.2)
+$default-handle-area-background-color = rgba(0, 211 , 113, 0.3)
+
+:root
+  /* default theme for browsers that do support CSS variables */
+  --cell-border: $default-cell-border
+  --dark-cell-border: darken($default-cell-border, 10)
+  --selected-border-color: $default-selected-border-color
+  --selected-background-color: alpha($default-selected-border-color, 0.1)
+  --dependency-border-color: $default-dependency-border-color
+  --input-background-color: $default-input-background-color
+  --selectarea-background-color: $default-selectarea-background-color
+  --handlearea-background-color: $default-handle-area-background-color
+
 .coup-de-grace
   /* http://www.colourlovers.com/palette/1098589/coup_de_grâce */
   $cell-border = #99B898
