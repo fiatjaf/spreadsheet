@@ -6,17 +6,17 @@
   *
     box-sizing border-box
   
-  div.top
+  .top
     padding 1px
   
     input
       width 100%
   
-  div.sheet
+  .sheet
     display inline-block
     margin-top 4px
   
-  div.row
+  .row
     -webkit-user-select: none;
     -moz-user-select: none;
   
@@ -32,7 +32,7 @@
     &:last-child .cell
       border-bottom-width 2px
   
-  div.cell
+  .cell
     position relative
     display inline-block
     white-space normal
@@ -64,7 +64,10 @@
     &.dependency
       border-color $default-dependency-border-color
       border-color var(--dependency-border-color)
-      border-width 1.5px
+      background-color alpha($default-dependency-border-color, 0.4)
+      background-color var(--dependency-background-color)
+      border-width 2px
+      border-style dotted
   
     &.editing
       padding 0
