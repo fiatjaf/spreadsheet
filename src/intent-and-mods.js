@@ -87,7 +87,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
       })
       .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode)),
     afterPaste$: COPYPASTE.pasted$
-      .map(input => input.split('\n').map(line => line.split('\t')))
+      .map(input => typeof input === 'string' ? input.split('\n').map(line => line.split('\t')) : input)
   }
 }
 
@@ -680,6 +680,8 @@ function modifications (actions) {
 
     actions.afterPaste$
       .map(rows => function getPastedValuesMod (state, cells) {
+        // `rows` is an array of arrays of values to paste.
+
         // determine where will the paste start
         var startAt
         if (state.areaSelect.start) {
@@ -693,6 +695,7 @@ function modifications (actions) {
           return {state, cells}
         }
 
+        // do the paste in a Grid transaction
         var txn = {cells: [], values: []}
         var cellBeingUpdated = startAt
         var lastUpdated
