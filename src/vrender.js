@@ -22,7 +22,7 @@ export const vrender = {
   main: function (state, cells) {
     return h('main.sheet-container', [
       vrender.top(state, cells),
-      h('div.sheet', [
+      h('table.sheet', [
         thunk.rowStatic('_', vrender.rowStatic, cells.numColumns())
       ].concat(
         cells.byRowColumn.map((row, i) =>
@@ -50,9 +50,9 @@ export const vrender = {
         i
       ))
     }
-    return h('div.row.static', cells)
+    return h('tr.row.static', cells)
   },
-  cellStatic: (label, location, index) => h('div.cell.static', {
+  cellStatic: (label, location, index) => h('td.cell.static', {
     key: label,
     className: location,
     dataset: { index: index + 1 }
@@ -62,7 +62,7 @@ export const vrender = {
     h('span.resizer.last', '|')
   ]),
   row: function (state, row, _, rowIndex) {
-    return h('div.row', [vrender.cellStatic(rowIndex + 1, 'left', rowIndex + 1)].concat(
+    return h('tr.row', [vrender.cellStatic(rowIndex + 1, 'left', rowIndex + 1)].concat(
       row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev))
     ))
   },
@@ -96,18 +96,18 @@ export const vrender = {
     }
 
     if (cell.name !== state.editing) {
-      return h('.cell.dyn', {
+      return h('td.cell.dyn', {
         className: cn,
         dataset: cd
       }, [
-        (cell.calc === null ? cell.raw : cell.calc).toString(),
+        h('div.text', (cell.calc === null ? cell.raw : cell.calc).toString()),
         cell.handle ? h('.handle', {innerHTML: '&#8203;'}) : null
       ])
     } else {
       let raw = state.currentInput // if this is not set, then it is a bug.
                                    // we cannot simply use `cell.raw` here
 
-      return h('.cell.dyn.editing', {
+      return h('td.cell.dyn.editing', {
         className: cn,
         dataset: cd
       }, h('input', {

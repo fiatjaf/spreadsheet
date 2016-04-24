@@ -8,13 +8,12 @@ module.exports.intent = intent
 module.exports.modifications = modifications
 
 function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
-  let cellClick$ = DOM.select('.cell.dyn:not(.editing)').events('click')
-    .filter(e => e.target === e.ownerTarget)
+  let cellClick$ = DOM.select('.cell .text').events('click')
   let cellInput$ = DOM.select('.cell.dyn.editing input').events('input')
   let cellBlur$ = DOM.select('.cell.dyn.editing').events('blur')
 
   let bufferedCellClick$ = cellClick$
-    .map(e => e.ownerTarget.dataset.name)
+    .map(e => e.ownerTarget.parentNode.dataset.name)
     .buffer(() => cellClick$.debounce(250))
     .share()
 
@@ -22,10 +21,9 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let topClick$ = DOM.select('.top input').events('click')
   let topBlur$ = DOM.select('.top input').events('blur')
 
-  let cellMouseDown$ = DOM.select('.cell.dyn:not(.editing)').events('mousedown')
-    .filter(e => e.target === e.ownerTarget)
-  let cellMouseEnter$ = DOM.select('.cell.dyn:not(.editing)').events('mouseenter')
-  let cellMouseUp$ = DOM.select('.cell.dyn:not(.editing)').events('mouseup')
+  let cellMouseDown$ = DOM.select('.cell .text').events('mousedown')
+  let cellMouseEnter$ = DOM.select('.cell .text').events('mouseenter')
+  let cellMouseUp$ = DOM.select('.cell .text').events('mouseup')
 
   // "handle" is not a verb, but that small box that stands at the side of the cell.
   let handleMouseDown$ = DOM.select('.handle').events('mousedown')
@@ -67,9 +65,9 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
         column: e.ownerTarget.classList.contains('top'),
         index: parseInt(e.ownerTarget.dataset.index, 0) - 2
       })),
-    cellMouseDown$: cellMouseDown$.map(e => e.ownerTarget.dataset.name),
-    cellMouseEnter$: cellMouseEnter$.map(e => e.ownerTarget.dataset.name),
-    cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.dataset.name),
+    cellMouseDown$: cellMouseDown$.map(e => e.ownerTarget.parentNode.dataset.name),
+    cellMouseEnter$: cellMouseEnter$.map(e => e.ownerTarget.parentNode.dataset.name),
+    cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.parentNode.dataset.name),
     handleMouseDown$: handleMouseDown$.map(e => e.target.parentNode.dataset.name),
     keyCommandFromInput$: editingKeydown$,
     keyCommandWithShift$: keyCommand$
@@ -450,12 +448,12 @@ function modifications (actions) {
         // if the mouse key was released out of the browser window
         // we should detect it now and cancel the "selecting" state
         let pressed = document.querySelectorAll('*:active')
-        let lastPressed = pressed[pressed.length - 1]
         if (!pressed.length ||
             ((state.handleSelecting &&
-              lastPressed.className !== 'handle') ||
+              pressed[pressed.length - 1].className !== 'handle') ||
              (state.areaSelecting &&
-              lastPressed.dataset.name !== state.areaSelect.start.name))) {
+              pressed[pressed.length - 2].dataset.name !== state.areaSelect.start.name))
+            ) {
           if (state.handleSelecting) {
             // "handle" area being hovered
             state.handleDrag = {}
