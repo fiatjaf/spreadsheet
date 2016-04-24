@@ -16,8 +16,7 @@
     "rx": "4.0.7",
     "sequence-pattern": "0.0.1",
     "stylus": "^0.53.0",
-    "vdom-thunk": "^3.0.0",
-    "xtend": "^4.0.1"
+    "vdom-thunk": "^3.0.0"
   },
   "browserify": {
     "transform": [

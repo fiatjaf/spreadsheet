@@ -1,7 +1,7 @@
 module.exports = makeAdaptWidthDriver
 
 function makeAdaptWidthDriver () {
-  return function (input$) {
+  return function adaptWidthDriver (input$) {
     input$
       .delay(1)
       .subscribe(input => {
@@ -12,7 +12,7 @@ function makeAdaptWidthDriver () {
 }
 
 function adaptWidth (input) {
-  if (input.offsetWidth < input.scrollWidth && parent) {
+  if (input.offsetWidth < input.scrollWidth) {
     input.style.width = (input.scrollWidth + 2) + 'px'
   }
 }

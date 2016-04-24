@@ -1,4 +1,4 @@
-import extend from 'xtend'
+import extend from 'deep-extend'
 
 module.exports = makeCustomCSSDriver
 
