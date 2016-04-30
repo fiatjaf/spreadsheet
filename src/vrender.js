@@ -69,6 +69,12 @@ export const vrender = {
   cell: function (state, cell) {
     var classes = []
 
+    var mergedIn
+    for ([mergedIn] of state.mergeGraph.mergedIn(cell.name)) {
+      classes.push('merged')
+      break
+    }
+
     if (cell.name in state.dependencies) classes.push('dependency')
     if (state.selected === cell.name) classes.push('selected')
     if (state.areaSelect.start) {
@@ -90,16 +96,17 @@ export const vrender = {
         break
     }
 
-    let cn = classes.join(' ')
-    let cd = {
-      name: cell.name
+    let props = {
+      className: classes.join(' '),
+      dataset: {
+        name: mergedIn || cell.name
+      },
+      rowSpan: state.mergeGraph.rowSpan(cell.name),
+      colSpan: state.mergeGraph.colSpan(cell.name)
     }
 
     if (cell.name !== state.editing) {
-      return h('td.cell.dyn', {
-        className: cn,
-        dataset: cd
-      }, [
+      return h('td.cell.dyn', props, [
         h('div.text', (cell.calc === null ? cell.raw : cell.calc).toString()),
         cell.handle ? h('.handle', {innerHTML: '&#8203;'}) : null
       ])
@@ -107,10 +114,7 @@ export const vrender = {
       let raw = state.currentInput // if this is not set, then it is a bug.
                                    // we cannot simply use `cell.raw` here
 
-      return h('td.cell.dyn.editing', {
-        className: cn,
-        dataset: cd
-      }, h('input', {
+      return h('td.cell.dyn.editing', props, h('input', {
         value: raw,
         'focus-hook': !state.editingTop ? new FocusHook() : null,
         'value-hook': !state.editingTop ? null : new ValueHook(raw)

@@ -164,7 +164,9 @@ class Grid {
   }
 
   bumpCells (cells) {
-    cells.forEach(cell => this.bumpCell(cell))
+    for (let i = 0; i < cells.length; i++) {
+      this.bumpCell(cells[i])
+    }
   }
 
   bumpAllCells () {
@@ -175,12 +177,16 @@ class Grid {
 
   getCellsInRange (range) {
     var inRange = []
-    for (let name in this.byName) {
-      let cell = this.byName[name]
-      if (cellInRange(cell, range)) {
-        inRange.push(cell)
+
+    let first = this.firstCellInRange(range)
+    let last = this.lastCellInRange(range)
+
+    for (let r = first.row; r <= last.row; r++) {
+      for (let c = first.column; c <= last.column; c++) {
+        inRange.push(this.getByRowColumn(r, c))
       }
     }
+
     return inRange
   }
 

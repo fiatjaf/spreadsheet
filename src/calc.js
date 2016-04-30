@@ -1,7 +1,7 @@
 import formulajs from 'formulajs'
 import * as Promise from 'bluebird'
 
-import depGraph from './deps'
+import depGraph from './dep-graph'
 import formulaParser from '../lib/formula-parser'
 import { renderParsedFormula } from './helpers'
 import { FORMULAERROR, CALCERROR, CALCULATING } from './const'
@@ -26,14 +26,14 @@ functions['GETJSON'] = (url) => window.fetch(url).then(res => res.json())
 export default function calc (cell, changed) {
   // remove all deps since the formula was changed
   if (changed) {
-    for (let dep in depGraph.adj(cell.name)) {
-      depGraph.deldir(cell.name, dep)
+    for (let dep in depGraph.dependencies(cell.name)) {
+      depGraph.removeDependency(cell.name, dep)
     }
   }
 
   // if this cell has some others depending on it,
   // mark them to recalc
-  for (let dependent in depGraph.inadj(cell.name)) {
+  for (let dependent in depGraph.dependents(cell.name)) {
     let depCell = this.getByName(dependent)
     if (depCell) {
       depCell.calc = CALCULATING
@@ -80,7 +80,7 @@ function calcExpr (expr, cell) {
     case 'string':
       return Promise.resolve(expr.value)
     case 'cell':
-      depGraph.dir(cell.name, expr.name) /* track cell dependency */
+      depGraph.addDependency(cell.name, expr.name) /* track cell dependency */
       return Promise.resolve(this.getByName(expr.name).calc)
     case 'range':
       let inRange = this.getCellsInRange({
@@ -89,7 +89,7 @@ function calcExpr (expr, cell) {
       })
       var values = []
       inRange.forEach(irc => {
-        depGraph.dir(cell.name, irc.name) /* track cell dependency */
+        depGraph.addDependency(cell.name, irc.name) /* track cell dependency */
         values.push(irc.calc)
       })
       return Promise.resolve(values)

@@ -1,6 +1,8 @@
 @import './themes'
+@import './context-menu'
 
 #spreadsheet
+  font-family sans-serif
   text-align center
 
   *
@@ -65,13 +67,15 @@
       background-color var(--dependency-background-color)
       border-width 2px
       border-style dotted
+
+    &.merged
+      display none
   
     &.editing
       padding 0
       overflow visible
       z-index 2
       overflow overlay
-      width 100%
   
     input
       padding 2px 0.2em 0 0.2em
@@ -131,6 +135,8 @@
   right 0
   background-color darken($default-cell-border, 10)
   background-color var(--dark-cell-border)
+  padding 2px
+  margin -2px
   
 .copy-paste
   display block

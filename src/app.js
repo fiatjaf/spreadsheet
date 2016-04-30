@@ -1,7 +1,8 @@
 import Rx from 'rx'
 import extend from 'deep-extend'
 
-import depGraph from './deps'
+import depGraph from './dep-graph'
+import MergeGraph from './merge-graph'
 import { vrender } from './vrender'
 import { intent, modifications } from './intent-and-mods'
 
@@ -10,15 +11,23 @@ export default function app ({
   COPYPASTE,
   INJECT,
   CELLS: cells$,
-  STATE: state$ = Rx.Observable.just(null)
-    .map(state => extend({areaSelect: {}, handleDrag: {}, dependencies: {}}, state || {}))
-    .shareReplay(1),
+  STATE: state$,
+  CONTEXTMENU,
   UPDATED,
   keydown: keydown$,
   keypress: keypress$
 }) {
+  // initializing state
+  state$ = (state$ || Rx.Observable.just({}))
+    .map(baseState => {
+      let state = extend({areaSelect: {}, handleDrag: {}, dependencies: {}}, baseState)
+      state.mergeGraph = new MergeGraph(state.merged || {})
+      return state
+    })
+    .shareReplay(1)
+
   /* this is where the real action happens */
-  let actions = intent(DOM, COPYPASTE, INJECT, keydown$, keypress$)
+  let actions = intent(DOM, COPYPASTE, INJECT, CONTEXTMENU, keydown$, keypress$)
 
   let mod$ = modifications(actions)
     .share()
@@ -79,8 +88,8 @@ export default function app ({
             let cellName = state.editing || state.selected
             if (!cellName) return {state, cells}
 
-            // add new dependencies
-            for (let depCellName in depGraph.adj(cellName)) {
+            // add new dependencies styling
+            for (let depCellName in depGraph.dependencies(cellName)) {
               state.dependencies[depCellName] = true
               cells.bumpCellByName(depCellName)
             }
@@ -194,6 +203,10 @@ export default function app ({
     )
     .filter(m => m)
 
+  let contextMenu$ = DOM.select('.cell .text').events('contextmenu')
+    .do(e => e.preventDefault())
+    .withLatestFrom(signal$, (e, {state}) => ({state, e}))
+
   signal$ = signal$.combineLatest(UPDATED, signal => signal)
 
   let vtree$ = signal$
@@ -206,6 +219,7 @@ export default function app ({
     ADAPTWIDTH: DOM.select('.cell.dyn.editing input').observable
       .filter(inputs => inputs.length)
       .map(inputs => inputs[0]),
+    CONTEXTMENU: contextMenu$,
     CSS: resize$,
     signal$ // this is just useful for other cycle components instantiating this
   }

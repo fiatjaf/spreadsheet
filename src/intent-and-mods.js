@@ -7,8 +7,9 @@ import { handleValueGenerator } from './handle-drag'
 module.exports.intent = intent
 module.exports.modifications = modifications
 
-function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
+function intent (DOM, COPYPASTE, INJECT, CONTEXTMENU, keydown$, keypress$) {
   let cellClick$ = DOM.select('.cell .text').events('click')
+    .filter(e => e.which !== 3 /* right-clicks are ignored */)
   let cellInput$ = DOM.select('.cell.dyn.editing input').events('input')
   let cellBlur$ = DOM.select('.cell.dyn.editing').events('blur')
 
@@ -22,6 +23,7 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
   let topBlur$ = DOM.select('.top input').events('blur')
 
   let cellMouseDown$ = DOM.select('.cell .text').events('mousedown')
+    .filter(e => e.which !== 3 /* right-clicks are ignored */)
   let cellMouseEnter$ = DOM.select('.cell .text').events('mouseenter')
   let cellMouseUp$ = DOM.select('.cell .text').events('mouseup')
 
@@ -85,7 +87,9 @@ function intent (DOM, COPYPASTE, INJECT, keydown$, keypress$) {
       })
       .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode)),
     afterPaste$: COPYPASTE.pasted$
-      .map(input => typeof input === 'string' ? input.split('\n').map(line => line.split('\t')) : input)
+      .map(input => typeof input === 'string' ? input.split('\n').map(line => line.split('\t')) : input),
+    mergeCells$: CONTEXTMENU.filter(a => a === 'MERGE'),
+    unmergeCells$: CONTEXTMENU.filter(a => a === 'UNMERGE')
   }
 }
 
@@ -721,6 +725,41 @@ function modifications (actions) {
         state.areaSelect = {
           start: startAt,
           end: lastUpdated
+        }
+
+        return {state, cells}
+      }),
+
+    actions.mergeCells$
+      .map(() => function mergeCellsMod (state, cells) {
+        if (state.areaSelect.start && state.areaSelect.start !== state.areaSelect.end) {
+          let inRange = cells.getCellsInRange(state.areaSelect)
+          let first = inRange.shift()
+
+          var mergeNames = []
+          for (let i = 0; i < inRange.length; i++) {
+            let cell = inRange[i]
+            if (state.mergeGraph.isMergedOver(cell.name)) {
+              return {state, cells}
+            }
+            mergeNames.push(cell.name)
+          }
+          state.mergeGraph.merge(first.name, mergeNames)
+
+          cells.bumpCells(inRange)
+          cells.bumpCell(first)
+        }
+
+        return {state, cells}
+      }),
+
+    actions.unmergeCells$
+      .map(() => function unmergeCellsMod (state, cells) {
+        if (state.selected) {
+          let modified = state.mergeGraph.unmerge(state.selected)
+          for (let i = 0; i < modified.length; i++) {
+            cells.bumpCellByName(modified[i])
+          }
         }
 
         return {state, cells}
