@@ -32,9 +32,11 @@ class MergeGraph extends Graph {
   // cell B1 is merged into A1
   mergedIn (cell) { // passing b1
     try {
-      return this.verticesFrom(cell) // returns Iterator{a1: true}
+      for (let [base] of this.verticesFrom(cell)) {
+        return base // returns a1
+      }
     } catch (e) {
-      return []
+      return null
     }
   }
 

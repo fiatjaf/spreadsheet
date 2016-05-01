@@ -8,6 +8,7 @@
     "basiccontext": "^3.5.1",
     "beirada": "^0.1.2",
     "bluebird": "^3.3.5",
+    "class-set": "0.0.4",
     "cycle-restart": "0.0.9",
     "deep-extend": "^0.4.1",
     "formulajs": "fiatjaf/formula.js",

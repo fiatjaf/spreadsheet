@@ -1,4 +1,5 @@
 import {h} from '@cycle/dom'
+import cx from 'class-set'
 import Letters from 'letters'
 
 import { cellInRange } from './grid'
@@ -67,37 +68,19 @@ export const vrender = {
     ))
   },
   cell: function (state, cell) {
-    var classes = []
-
-    var mergedIn
-    for ([mergedIn] of state.mergeGraph.mergedIn(cell.name)) {
-      classes.push('merged')
-      break
-    }
-
-    if (cell.name in state.dependencies) classes.push('dependency')
-    if (state.selected === cell.name) classes.push('selected')
-    if (state.areaSelect.start) {
-      if (cellInRange(cell, state.areaSelect)) classes.push('selectArea')
-    }
-    if (state.handleDrag.length) {
-      if (cellInHandleDrag(cell, state.handleDrag)) classes.push('handleArea')
-    }
-
-    switch (cell.calc) {
-      case CALCULATING:
-        classes.push('calculating')
-        break
-      case CALCERROR:
-        classes.push('calcerror')
-        break
-      case FORMULAERROR:
-        classes.push('formulaerror')
-        break
-    }
+    var mergedIn = state.mergeGraph.mergedIn(cell.name)
 
     let props = {
-      className: classes.join(' '),
+      className: cx({
+        'selected': state.selected === cell.name,
+        'selectArea': state.areaSelect.start && cellInRange(cell, state.areaSelect),
+        'handleArea': state.handleDrag.length && cellInHandleDrag(cell, state.handleDrag),
+        'merged': mergedIn,
+        'formulaerror': cell.calc === FORMULAERROR,
+        'calcerror': cell.calc === CALCERROR,
+        'calculating': cell.calc === CALCULATING,
+        'dependency': cell.name in state.dependencies
+      }),
       dataset: {
         name: mergedIn || cell.name
       },
