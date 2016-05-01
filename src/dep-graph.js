@@ -1,10 +1,33 @@
-import Graph from 'beirada'
+import Graph from 'graph.js/dist/graph.js'
 
-const depGraph = new Graph()
+class DepGraph extends Graph {
+  dependencies (cell) {
+    try {
+      return this.verticesFrom(cell)
+    } catch (e) {
+      return []
+    }
+  }
+
+  dependents (cell) {
+    try {
+      return this.verticesTo(cell)
+    } catch (e) {
+      return []
+    }
+  }
+
+  addDependency (cell, dependency) {
+    this.addVertex(cell)
+    this.addVertex(dependency)
+    this.addEdge(cell, dependency)
+  }
+
+  removeDependency (cell, dependency) {
+    this.removeEdge(cell, dependency)
+  }
+}
+
+const depGraph = new DepGraph()
 
 module.exports = depGraph
-
-module.exports.dependencies = depGraph.adj.bind(depGraph)
-module.exports.dependents = depGraph.inadj.bind(depGraph)
-module.exports.addDependency = (cell, dependency) => depGraph.dir(cell, dependency)
-module.exports.removeDependency = (cell, dependency) => depGraph.deldir(cell, dependency)

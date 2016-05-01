@@ -26,14 +26,14 @@ functions['GETJSON'] = (url) => window.fetch(url).then(res => res.json())
 export default function calc (cell, changed) {
   // remove all deps since the formula was changed
   if (changed) {
-    for (let dep in depGraph.dependencies(cell.name)) {
+    for (let [dep] of depGraph.dependencies(cell.name)) {
       depGraph.removeDependency(cell.name, dep)
     }
   }
 
   // if this cell has some others depending on it,
   // mark them to recalc
-  for (let dependent in depGraph.dependents(cell.name)) {
+  for (let [dependent] of depGraph.dependents(cell.name)) {
     let depCell = this.getByName(dependent)
     if (depCell) {
       depCell.calc = CALCULATING

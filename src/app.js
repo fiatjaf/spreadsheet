@@ -89,7 +89,7 @@ export default function app ({
             if (!cellName) return {state, cells}
 
             // add new dependencies styling
-            for (let depCellName in depGraph.dependencies(cellName)) {
+            for (let [depCellName] of depGraph.dependencies(cellName)) {
               state.dependencies[depCellName] = true
               cells.bumpCellByName(depCellName)
             }
