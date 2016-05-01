@@ -1,4 +1,7 @@
 import Rx from 'rx'
+import {h} from '@cycle/dom'
+import cx from 'class-set'
+import toHTML from 'vdom-to-html'
 
 module.exports = makeContextMenuDriver
 
@@ -17,8 +20,9 @@ function makeContextMenuDriver () {
     if (e.target.classList.contains('disabled')) return
 
     let tag = e.target.dataset.tag
+    let value = e.target.dataset.value
 
-    action$.onNext(tag)
+    action$.onNext({tag, value})
   })
 
   document.body.addEventListener('click', function (e) {
@@ -28,6 +32,14 @@ function makeContextMenuDriver () {
   return function contextMenuDriver (trigger$) {
     trigger$.subscribe(({e, state}) => {
       let items = [
+        {multiple: true, tag: 'BACKGROUND', options: backgroundColours.map(o => ({
+          value: o,
+          style: {backgroundColor: o}
+        }))},
+        {multiple: true, tag: 'COLOUR', options: letterColours.map(o => ({
+          value: o,
+          style: {color: o}
+        }))},
         {title: 'Merge cells', tag: 'MERGE', disabled:
           !state.areaSelect.end || !state.areaSelect.start ||
           (state.areaSelect.start.name === state.selected && state.areaSelect.end.name === state.selected)
@@ -49,11 +61,23 @@ function show (items, e) {
   div.style.left = `${e.pageX}px`
   div.style.top = `${e.pageY}px`
 
-  div.innerHTML = `<ul>${
-    items.map(i =>
-      `<li><a class='${i.disabled ? 'disabled' : ''}' data-tag='${i.tag}'>${i.title}</a></li>`
-    ).join('')
-  }</ul>`
+  div.innerHTML = toHTML(h('ul', items.map(i =>
+    h('li', [
+      i.multiple
+      ? i.options.length <= 7
+        ? i.options.map(o =>
+          h('a.box', {
+            attributes: {'data-tag': i.tag, 'data-value': o.value},
+            style: o.style
+          }, 'F')
+        )
+        : [h('select', [i.options.map(o => h('option', {value: o.value}, o.value))])]
+      : h('a', {
+        className: cx({disabled: i.disabled}),
+        attributes: {'data-tag': i.tag}
+      }, i.title)
+    ])
+  )))
 }
 
 function hide () {
@@ -61,3 +85,23 @@ function hide () {
   div.style.left = ''
   div.style.right = ''
 }
+
+const backgroundColours = [
+  '#FFABAB',
+  '#FFDAAB',
+  '#DDFFAB',
+  '#ABE4FF',
+  '#D9ABFF',
+  '#FFFFFF',
+  '#000000'
+]
+
+const letterColours = [
+  '#00CBE7',
+  '#00DA3C',
+  '#F4F328',
+  '#FD8603',
+  '#DF151A',
+  '#FFFFFF',
+  '#000000'
+]

@@ -5,6 +5,7 @@ import depGraph from './dep-graph'
 import MergeGraph from './merge-graph'
 import { vrender } from './vrender'
 import { intent, modifications } from './intent-and-mods'
+import { cellInRange } from './grid'
 
 export default function app ({
   DOM,
@@ -203,9 +204,34 @@ export default function app ({
     )
     .filter(m => m)
 
+  let colours$ = Rx.Observable.merge(
+    CONTEXTMENU.filter(a => a.tag === 'COLOUR')
+      .map(({value}) => ({type: 'color', value})),
+    CONTEXTMENU.filter(a => a.tag === 'BACKGROUND')
+      .map(({value}) => ({type: 'background-color', value}))
+  )
+    .withLatestFrom(signal$, (what, {state, cells}) => {
+      let mod = {
+        type: what.type,
+        cells: {}
+      }
+      cells.getCellsInRange(state.areaSelect)
+        .map(c => c.name)
+        .concat(state.selected)
+        .forEach(cellName => {
+          mod.cells[cellName] = { [what.type]: what.value }
+        }
+      )
+      return mod
+    })
+
   let contextMenu$ = DOM.select('.cell .text').events('contextmenu')
-    .do(e => e.preventDefault())
-    .withLatestFrom(signal$, (e, {state}) => ({state, e}))
+    .withLatestFrom(signal$, (e, {state, cells}) => ({state, cells, e}))
+    .filter(({state, cells, e}) =>
+      e.ownerTarget.parentNode.dataset.name === state.selected ||
+      cellInRange(cells.getByName(e.ownerTarget.parentNode.dataset.name), state.areaSelect)
+    )
+    .do(({e}) => e.preventDefault())
 
   signal$ = signal$.combineLatest(UPDATED, signal => signal)
 
@@ -220,7 +246,7 @@ export default function app ({
       .filter(inputs => inputs.length)
       .map(inputs => inputs[0]),
     CONTEXTMENU: contextMenu$,
-    CSS: resize$,
+    CSS: Rx.Observable.merge(resize$, colours$),
     signal$ // this is just useful for other cycle components instantiating this
   }
 }

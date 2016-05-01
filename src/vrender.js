@@ -56,7 +56,7 @@ export const vrender = {
   cellStatic: (label, location, index) => h('td.cell.static', {
     key: label,
     className: location,
-    dataset: { index: index + 1 }
+    dataset: {index: index + 1}
   }, [
     h('span.resizer.first', '|'),
     label,

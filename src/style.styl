@@ -54,11 +54,20 @@
       overflow -moz-scrollbars-none
   
     &.selected
-      border-color $default-selected-border-color
-      background-color alpha($default-selected-border-color, 0.1)
-      border-color var(--selected-border-color)
-      background-color var(--selected-background-color)
       border-width 1.5px
+      border-color $default-selected-border-color
+      border-color var(--selected-border-color)
+
+      .text
+        background-color alpha($default-selected-border-color, 0.1)
+        background-color var(--selected-background-color)
+  
+    &.selectArea .text
+      background-color $default-selectarea-background-color
+      background-color var(--selectarea-background-color)
+    &.handleArea:not(.selectArea):not(.selected) .text
+      background-color $default-handlearea-background-color
+      background-color var(--handlearea-background-color)
 
     &.dependency
       border-color $default-dependency-border-color
@@ -81,19 +90,13 @@
       padding 2px 0.2em 0 0.2em
       background-color $default-input-background-color
       background-color var(--input-background-color)
+      color inherit
       width 100%
       height 100%
       border none
       word-break normal
       outline none
       display block
-  
-    &.selectArea
-      background-color $default-selectarea-background-color
-      background-color var(--selectarea-background-color)
-    &.handleArea:not(.selectArea):not(.selected)
-      background-color $default-handlearea-background-color
-      background-color var(--handlearea-background-color)
   
     &.formulaerror
       background-color #EBD4A1

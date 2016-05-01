@@ -88,8 +88,8 @@ function intent (DOM, COPYPASTE, INJECT, CONTEXTMENU, keydown$, keypress$) {
       .map(e => String.fromCharCode(e.which || e.keyCode || e.charCode)),
     afterPaste$: COPYPASTE.pasted$
       .map(input => typeof input === 'string' ? input.split('\n').map(line => line.split('\t')) : input),
-    mergeCells$: CONTEXTMENU.filter(a => a === 'MERGE'),
-    unmergeCells$: CONTEXTMENU.filter(a => a === 'UNMERGE')
+    mergeCells$: CONTEXTMENU.filter(a => a.tag === 'MERGE'),
+    unmergeCells$: CONTEXTMENU.filter(a => a.tag === 'UNMERGE')
   }
 }
 
@@ -303,7 +303,6 @@ function modifications (actions) {
       .merge(actions.injected$)
       .map(val => function saveCurrentInputMod (state, cells) {
         state.currentInput = val
-        // cells.getByName(state.editing).raw = val
         return {state, cells}
       }),
 
