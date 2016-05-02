@@ -44,7 +44,7 @@ class MergeGraph extends Graph {
   merge (base, over) {
     const l = /\D+/
     const n = /\d+/
-    var firstNumber = n.exec(base)[0]
+    var firstNumber = parseInt(n.exec(base)[0])
     var lastNumber = firstNumber
     var firstLetter = l.exec(base)[0]
     var lastLetter = firstLetter
@@ -55,7 +55,7 @@ class MergeGraph extends Graph {
       this.addVertex(over[i])
       this.addEdge(over[i], base)
 
-      let number = n.exec(over[i])[0]
+      let number = parseInt(n.exec(over[i])[0])
       let letter = l.exec(over[i])[0]
       lastNumber = number > lastNumber ? number : lastNumber
       lastLetter = letter > lastLetter ? letter : lastLetter
@@ -77,6 +77,15 @@ class MergeGraph extends Graph {
     delete this._colSpan[base]
 
     return modified
+  }
+
+  exportToMergedProperty () {
+    var merged = {}
+    for (let [from, to] of this.edges()) {
+      merged[to] = merged[to] || []
+      merged[to].push(from)
+    }
+    return merged
   }
 
   rowSpan (cell) {

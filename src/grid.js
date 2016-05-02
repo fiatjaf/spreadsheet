@@ -178,13 +178,17 @@ class Grid {
   getCellsInRange (range) {
     var inRange = []
 
-    let first = this.firstCellInRange(range)
-    let last = this.lastCellInRange(range)
+    try {
+      let first = this.firstCellInRange(range)
+      let last = this.lastCellInRange(range)
 
-    for (let r = first.row; r <= last.row; r++) {
-      for (let c = first.column; c <= last.column; c++) {
-        inRange.push(this.getByRowColumn(r, c))
+      for (let r = first.row; r <= last.row; r++) {
+        for (let c = first.column; c <= last.column; c++) {
+          inRange.push(this.getByRowColumn(r, c))
+        }
       }
+    } catch (e) {
+      return []
     }
 
     return inRange

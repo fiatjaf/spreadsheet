@@ -38,13 +38,12 @@ function makeCustomCSSDriver (initialRules = {}) {
       }
 
       style.innerHTML = render(rules)
-
-      return rules /* expose updated rules */
     })
 
     mod$.connect()
 
     return mod$
+      .map(() => rules /* expose current rules */)
   }
 }
 
