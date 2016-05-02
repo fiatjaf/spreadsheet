@@ -20,6 +20,9 @@
     "stylus": "^0.53.0",
     "vdom-thunk": "^3.0.0"
   },
+  "peerDependencies": {
+    "babel-polyfill": "*"
+  },
   "browserify": {
     "transform": [
       "babelify"
