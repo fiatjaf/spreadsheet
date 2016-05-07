@@ -47,7 +47,11 @@ operative
     var loc = location()
     return {type: 'string', value: s, pos: [loc.start.offset, loc.end.offset]}
   }
-  / fn
+  / fn:fn {
+    var loc = location()
+    fn.pos = [loc.start.offset, loc.end.offset]
+    return fn
+  }
   / "(" o:operativeOrNothing ")" { return o }
 
 operator

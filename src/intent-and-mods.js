@@ -25,7 +25,7 @@ function intent (DOM, COPYPASTE, INJECT, CONTEXTMENU, keydown$, keypress$) {
   let cellMouseDown$ = DOM.select('.cell .text').events('mousedown')
     .filter(e => e.which !== 3 /* right-clicks are ignored */)
   let cellMouseEnter$ = DOM.select('.cell .text').events('mouseenter')
-  let cellMouseUp$ = DOM.select('.cell .text').events('mouseup')
+  let cellMouseUp$ = DOM.select('.cell.dyn:not(.editing)').events('mouseup')
 
   // "handle" is not a verb, but that small box that stands at the side of the cell.
   let handleMouseDown$ = DOM.select('.handle').events('mousedown')
@@ -69,7 +69,7 @@ function intent (DOM, COPYPASTE, INJECT, CONTEXTMENU, keydown$, keypress$) {
       })),
     cellMouseDown$: cellMouseDown$.map(e => e.ownerTarget.parentNode.dataset.name),
     cellMouseEnter$: cellMouseEnter$.map(e => e.ownerTarget.parentNode.dataset.name),
-    cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.parentNode.dataset.name),
+    cellMouseUp$: cellMouseUp$.map(e => e.ownerTarget.dataset.name),
     handleMouseDown$: handleMouseDown$.map(e => e.target.parentNode.dataset.name),
     keyCommandFromInput$: editingKeydown$,
     keyCommandWithShift$: keyCommand$
@@ -302,7 +302,7 @@ function modifications (actions) {
       .merge(actions.topInput$)
       .merge(actions.injected$)
       .map(val => function saveCurrentInputMod (state, cells) {
-        state.currentInput = val
+        if (typeof val === 'string') state.currentInput = val
         return {state, cells}
       }),
 
@@ -473,6 +473,7 @@ function modifications (actions) {
 
         let cell = cells.getByName(cellName)
         if (state.handleSelecting) {
+          cells.bumpAllCells()
           let {base} = state.handleDrag
 
           // handle select
@@ -506,10 +507,11 @@ function modifications (actions) {
           }
         } else {
           // normal area select
+          cells.bumpCells(cells.getCellsInRange(state.areaSelect)) // bump previous selection
           state.areaSelect.end = cell
+          cells.bumpCells(cells.getCellsInRange(state.areaSelect)) // bump current selection
         }
 
-        cells.bumpAllCells()
         return {state, cells}
       }),
 
