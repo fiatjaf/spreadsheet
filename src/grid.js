@@ -8,6 +8,7 @@ class Grid {
     this.calc = calc.bind(this)
 
     this.byName = {}
+    this.byId = {}
     this.byRowColumn = []
 
     this.rowRev = {}
@@ -38,6 +39,7 @@ class Grid {
 
   resetGrid (width, height) {
     this.byName = {}
+    this.byId = {}
     this.byRowColumn = []
 
     for (let col = 0; col < width; col++) {
@@ -45,6 +47,7 @@ class Grid {
         let cell = this.makeCell(row, col)
 
         this.byName[cell.name] = cell
+        this.byId[cell.id] = cell
         this.byRowColumn[row] = (this.byRowColumn[row] || []).concat(cell)
       }
     }
@@ -60,8 +63,15 @@ class Grid {
     this.resetGrid(width, height)
 
     for (let cellName in oldByName) {
+      let oldCell = oldByName[cellName]
       let cell = this.getByName(cellName)
-      if (cell) this._set(cell, oldByName[cellName].raw)
+      if (cell) {
+        this._set(cell, oldCell.raw)
+
+        delete this.byId[cell.id]
+        cell.id = oldCell.id
+        this.byId[cell.id] = cell
+      }
     }
   }
 
@@ -148,6 +158,10 @@ class Grid {
   recalc (cell) {
     this.calc(cell, false)
     this.bumpCell(cell)
+  }
+
+  getById (id) {
+    return this.byId[id]
   }
 
   getByName (name) {
