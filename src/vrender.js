@@ -79,13 +79,14 @@ export const vrender = {
         'calcerror': cell.calc === CALCERROR,
         'calculating': cell.calc === CALCULATING,
         'dependency': cell.name in state.dependencies
-      }),
+      }, `cell-id-${cell.id}`),
       dataset: {
-        name: mergedIn || cell.name
+        name: mergedIn || cell.name,
+        id: cell.id
       },
       rowSpan: state.mergeGraph.rowSpan(cell.name),
       colSpan: state.mergeGraph.colSpan(cell.name),
-      key: cell.name
+      key: cell.id
     }
 
     if (cell.name !== state.editing) {

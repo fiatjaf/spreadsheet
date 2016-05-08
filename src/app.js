@@ -216,10 +216,10 @@ export default function app ({
         cells: {}
       }
       cells.getCellsInRange(state.areaSelect)
-        .map(c => c.name)
-        .concat(state.selected)
-        .forEach(cellName => {
-          mod.cells[cellName] = { [what.type]: what.value }
+        .map(c => c.id)
+        .concat(cells.getByName(state.selected).id)
+        .forEach(cellId => {
+          mod.cells[cellId] = { [what.type]: what.value }
         }
       )
       return mod

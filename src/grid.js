@@ -1,4 +1,5 @@
 import rangegen from 'rangegen'
+import cuid from 'cuid'
 
 var calc = require('./calc').default
 
@@ -20,6 +21,7 @@ class Grid {
 
   makeCell (row, col) {
     return {
+      id: cuid.slug(),
       raw: '',
       calc: '',
       name: this.makeCellName(row, col),

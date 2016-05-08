@@ -69,10 +69,10 @@ function render (rules) {
       }\n`
     }
   }
-  for (let cellName in rules.cells) {
-    css += `.cell[data-name="${cellName}"] {`
-    for (let ruleName in rules.cells[cellName]) {
-      css += `${ruleName}: ${rules.cells[cellName][ruleName]};`
+  for (let cellId in rules.cells) {
+    css += `.cell.cell-id-${cellId} {`
+    for (let ruleName in rules.cells[cellId]) {
+      css += `${ruleName}: ${rules.cells[cellId][ruleName]};`
     }
     css += `}\n`
   }
