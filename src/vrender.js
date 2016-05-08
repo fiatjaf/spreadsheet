@@ -1,6 +1,6 @@
 import {h} from '@cycle/dom'
 import cx from 'class-set'
-import Letters from 'letters'
+import rangegen from 'rangegen'
 
 import { cellInRange } from './grid'
 import { cellInHandleDrag } from './handle-drag'
@@ -42,11 +42,10 @@ export const vrender = {
     ])
   },
   rowStatic: (ncolumns) => {
-    var letters = new Letters()
     var cells = [vrender.cellStatic('', 'top left', 0)]
     for (let i = 1; i < ncolumns + 1; i++) {
       cells.push(vrender.cellStatic(
-        letters.next().toUpperCase(),
+        rangegen.enc(i - 1, false),
         'top',
         i
       ))
@@ -85,7 +84,8 @@ export const vrender = {
         name: mergedIn || cell.name
       },
       rowSpan: state.mergeGraph.rowSpan(cell.name),
-      colSpan: state.mergeGraph.colSpan(cell.name)
+      colSpan: state.mergeGraph.colSpan(cell.name),
+      key: cell.name
     }
 
     if (cell.name !== state.editing) {

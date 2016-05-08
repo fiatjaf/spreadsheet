@@ -89,7 +89,9 @@ function intent (DOM, COPYPASTE, INJECT, CONTEXTMENU, keydown$, keypress$) {
     afterPaste$: COPYPASTE.pasted$
       .map(input => typeof input === 'string' ? input.split('\n').map(line => line.split('\t')) : input),
     mergeCells$: CONTEXTMENU.filter(a => a.tag === 'MERGE'),
-    unmergeCells$: CONTEXTMENU.filter(a => a.tag === 'UNMERGE')
+    unmergeCells$: CONTEXTMENU.filter(a => a.tag === 'UNMERGE'),
+    dropLine$: CONTEXTMENU.filter(a => a.tag.substr(0, 5) === 'DROP-'),
+    insertLine$: CONTEXTMENU.filter(a => a.tag.substr(0, 4) === 'ADD-')
   }
 }
 
@@ -760,6 +762,98 @@ function modifications (actions) {
           let modified = state.mergeGraph.unmerge(state.selected)
           for (let i = 0; i < modified.length; i++) {
             cells.bumpCellByName(modified[i])
+          }
+        }
+        return {state, cells}
+      }),
+
+    actions.dropLine$
+      .map(({tag, value}) => function dropLineMod (state, cells) {
+        let index = parseInt(value)
+        let kind = tag.split('-')[1]
+
+        if (kind === 'ROW') {
+          let lastRow = cells.byRowColumn[cells.byRowColumn.length - 1]
+          for (let d = 0; d < lastRow.length; d++) { // remove lastRow cells from byName
+            delete cells.byName[lastRow[d].name]
+          }
+          cells.byRowColumn.splice(index, 1)[0] // drop row at index
+          for (let r = index; r < cells.byRowColumn.length; r++) {
+            // change the names of all cells in all rows after the dropped index, including it
+            let row = cells.byRowColumn[r]
+            for (let c = 0; c < row.length; c++) {
+              let cell = row[c]
+              cell.row = r
+              cell.name = cells.makeCellName(cell.row, cell.column)
+              cells.byName[cell.name] = cell
+              cells.bumpCell(cell)
+            }
+          }
+        } else if (kind === 'COLUMN') {
+          // for all rows, do
+          for (let r = 0; r < cells.byRowColumn.length; r++) {
+            let row = cells.byRowColumn[r]
+
+            delete cells.byName[row[row.length - 1].name] // remove last cell cell from byName
+            row.splice(index, 1)[0] // remove cell at index from row
+
+            for (let c = index; c < row.length; c++) {
+              // change the names of all cells after index, including it
+              let cell = row[c]
+              cell.column = c
+              cell.name = cells.makeCellName(cell.row, cell.column)
+              cells.byName[cell.name] = cell
+              cells.bumpCell(cell)
+            }
+          }
+        }
+
+        return {state, cells}
+      }),
+
+    actions.insertLine$
+      .map(({tag, value}) => function insertLineMod (state, cells) {
+        let [kind, pos] = tag.split('-').slice(1)
+        let index = parseInt(value) + (pos === 'BEFORE' ? 0 : 1)
+
+        if (kind === 'ROW') {
+          // insert row
+          var newRow = []
+          for (let n = 0; n < cells.byRowColumn[0].length; n++) {
+            let newCell = cells.makeCell(index, n)
+            newRow[n] = newCell
+            cells.byName[newCell.name] = newCell
+          }
+          cells.byRowColumn.splice(index, 0, newRow)
+
+          for (let r = index + 1; r < cells.byRowColumn.length; r++) {
+            // change the names of all cells in all rows after the inserted index
+            let row = cells.byRowColumn[r]
+            for (let c = 0; c < row.length; c++) {
+              let cell = row[c]
+              cell.row = r
+              cell.name = cells.makeCellName(cell.row, cell.column)
+              cells.byName[cell.name] = cell
+              cells.bumpCell(cell)
+            }
+          }
+        } else if (kind === 'COLUMN') {
+          for (let r = 0; r < cells.byRowColumn.length; r++) {
+            let row = cells.byRowColumn[r]
+
+            // insert cell
+            let newCell = cells.makeCell(r, index)
+            cells.byName[newCell.name] = newCell
+            row.splice(index, 0, newCell)
+
+            for (let c = index + 1; c < row.length; c++) {
+              // change the names of all cells after the inserted index
+              let cell = row[c]
+              cell.column = c
+              cell.name = cells.makeCellName(cell.row, cell.column)
+              cells.byName[cell.name] = cell
+              cells.bumpCell(cell)
+            }
           }
         }
 

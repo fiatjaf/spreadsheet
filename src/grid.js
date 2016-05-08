@@ -1,4 +1,4 @@
-import Letters from 'letters'
+import rangegen from 'rangegen'
 
 var calc = require('./calc').default
 
@@ -18,34 +18,37 @@ class Grid {
     this.resetGrid(w, h)
   }
 
-  resetGrid (width, height) {
-    this.letters = new Letters() // this is lowercase
+  makeCell (row, col) {
+    return {
+      raw: '',
+      calc: '',
+      name: this.makeCellName(row, col),
+      row: row,
+      column: col,
+      rev: Math.random(),
+      handle: false
+    }
+  }
 
+  makeCellName (row, col) {
+    return `${rangegen.enc(col, true)}${row + 1}`
+  }
+
+  resetGrid (width, height) {
     this.byName = {}
     this.byRowColumn = []
 
     for (let col = 0; col < width; col++) {
-      let letter = this.letters.next()
-
       for (let row = 0; row < height; row++) {
-        let name = `${letter}${row + 1}`
-        let cell = {
-          raw: '',
-          calc: '',
-          name: name,
-          row: row,
-          column: col,
-          rev: 0,
-          handle: false
-        }
+        let cell = this.makeCell(row, col)
 
-        this.byName[name] = cell
+        this.byName[cell.name] = cell
         this.byRowColumn[row] = (this.byRowColumn[row] || []).concat(cell)
       }
     }
 
     for (let row = 0; row < height; row++) {
-      this.rowRev[row] = (this.rowRev[row] || 0) + 1
+      this.rowRev[row] = (this.rowRev[row] || Math.random()) + 1
     }
   }
 

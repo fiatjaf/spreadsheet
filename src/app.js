@@ -225,13 +225,18 @@ export default function app ({
       return mod
     })
 
-  let contextMenu$ = DOM.select('.cell .text').events('contextmenu')
-    .withLatestFrom(signal$, (e, {state, cells}) => ({state, cells, e}))
-    .filter(({state, cells, e}) =>
-      e.ownerTarget.parentNode.dataset.name === state.selected ||
-      cellInRange(cells.getByName(e.ownerTarget.parentNode.dataset.name), state.areaSelect)
-    )
-    .do(({e}) => e.preventDefault())
+  let contextMenu$ = Rx.Observable.merge(
+    DOM.select('.cell .text').events('contextmenu')
+      .withLatestFrom(signal$, (e, {state, cells}) => ({state, cells, e, tag: 'CELL'}))
+      .filter(({state, cells, e}) =>
+        e.ownerTarget.parentNode.dataset.name === state.selected ||
+        cellInRange(cells.getByName(e.ownerTarget.parentNode.dataset.name), state.areaSelect)
+      )
+      .do(({e}) => e.preventDefault()),
+    DOM.select('.cell.static').events('contextmenu')
+      .withLatestFrom(signal$, (e, {state, cells}) => ({state, cells, e, tag: 'HEADER'}))
+      .do(({e}) => e.preventDefault())
+  )
 
   signal$ = signal$.combineLatest(UPDATED, signal => signal)
 
