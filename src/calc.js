@@ -26,15 +26,14 @@ functions['GETJSON'] = (url) => window.fetch(url).then(res => res.json())
 export default function calc (cell, changed) {
   // remove all deps since the formula was changed
   if (changed) {
-    for (let [dep] of depGraph.dependencies(cell.name)) {
-      depGraph.removeDependency(cell.name, dep)
+    for (let [depId] of depGraph.dependencies(cell.id)) {
+      depGraph.removeDependency(cell.id, depId)
     }
   }
 
   // if this cell has some others depending on it,
   // mark them to recalc
-  for (let [dependent] of depGraph.dependents(cell.name)) {
-    let depCell = this.getByName(dependent)
+  for (let [_, depCell] of depGraph.dependents(cell.id)) {
     if (depCell) {
       depCell.calc = CALCULATING
       this.bumpCell(depCell)
@@ -80,16 +79,17 @@ function calcExpr (expr, cell) {
     case 'string':
       return Promise.resolve(expr.value)
     case 'cell':
-      depGraph.addDependency(cell.name, expr.name) /* track cell dependency */
-      return Promise.resolve(this.getByName(expr.name).calc)
+      // track cell dependency
+      depGraph.addDependency(cell, expr.cell /* cell is a full cell object */)
+      return Promise.resolve(expr.cell.calc)
     case 'range':
       let inRange = this.getCellsInRange({
-        start: this.getByName(expr.start),
-        end: this.getByName(expr.end)
+        start: expr.start, // start and end are full cell objects
+        end: expr.end
       })
       var values = []
       inRange.forEach(irc => {
-        depGraph.addDependency(cell.name, irc.name) /* track cell dependency */
+        depGraph.addDependency(cell, irc) /* track cell dependency */
         values.push(irc.calc)
       })
       return Promise.resolve(values)

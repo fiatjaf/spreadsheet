@@ -1,30 +1,30 @@
 import Graph from 'graph.js/dist/graph.js'
 
 class DepGraph extends Graph {
-  dependencies (cell) {
+  dependencies (cellId) {
     try {
-      return this.verticesFrom(cell)
+      return this.verticesFrom(cellId)
     } catch (e) {
       return []
     }
   }
 
-  dependents (cell) {
+  dependents (cellId) {
     try {
-      return this.verticesTo(cell)
+      return this.verticesTo(cellId)
     } catch (e) {
       return []
     }
   }
 
-  addDependency (cell, dependency) {
-    this.addVertex(cell)
-    this.addVertex(dependency)
-    this.addEdge(cell, dependency)
+  addDependency (cell, dependency) { // expects cell and dependency to be full cell objects
+    this.addVertex(cell.id, cell)
+    this.addVertex(dependency.id, dependency)
+    this.addEdge(cell.id, dependency.id)
   }
 
-  removeDependency (cell, dependency) {
-    this.removeEdge(cell, dependency)
+  removeDependency (cellId, dependencyId) {
+    this.removeEdge(cellId, dependencyId)
   }
 }
 

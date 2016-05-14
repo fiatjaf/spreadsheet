@@ -37,7 +37,7 @@ operative
   }
   / c:cell {
     var loc = location()
-    return {type: 'cell', name: c, pos: [loc.start.offset, loc.end.offset]}
+    return {type: 'cell', cell: c, pos: [loc.start.offset, loc.end.offset]}
   }
   / n:number {
     var loc = location()
@@ -90,7 +90,7 @@ range
   = c1:cell ":" c2:cell { return {start: c1, end: c2} }
 
 cell
-  = l:[a-z]i+ n:number { return (l.join('') + n).toUpperCase() }
+  = l:[a-z]i+ n:number { return global.GLOBAL_GET_CELL((l.join('') + n).toUpperCase()) }
   
 number
   = d1:[0-9]* '.' d2:[0-9]* {

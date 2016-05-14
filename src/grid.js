@@ -6,6 +6,7 @@ var calc = require('./calc').default
 class Grid {
   constructor (w, h) {
     this.calc = calc.bind(this)
+    global.GLOBAL_GET_CELL = name => this.getByName(name) // this magic will be used inside the peg parser
 
     this.byName = {}
     this.byId = {}

@@ -98,16 +98,16 @@ export default function app ({
             // clean dependencies styling
             for (let d in state.dependencies) {
               delete state.dependencies[d]
-              cells.bumpCellByName(d)
+              cells.bumpCell(cells.getById(d))
             }
 
             let cellName = state.editing || state.selected
             if (!cellName) return {state, cells}
 
             // add new dependencies styling
-            for (let [depCellName] of depGraph.dependencies(cellName)) {
-              state.dependencies[depCellName] = true
-              cells.bumpCellByName(depCellName)
+            for (let [depCellId, depCell] of depGraph.dependencies(cells.idFromName(cellName))) {
+              state.dependencies[depCellId] = true
+              cells.bumpCell(depCell)
             }
             return {state, cells}
           })

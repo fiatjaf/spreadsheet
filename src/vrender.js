@@ -64,7 +64,7 @@ export const vrender = {
         'formulaerror': cell.calc === FORMULAERROR,
         'calcerror': cell.calc === CALCERROR,
         'calculating': cell.calc === CALCULATING,
-        'dependency': cell.name in state.dependencies
+        'dependency': cell.id in state.dependencies
       },
         `cell-id-${cell.id}`,
         `col-id-${cell.columnId}`

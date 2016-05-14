@@ -23,9 +23,9 @@ function print (e) {
   if (e.type !== 'function') {
     switch (e.type) {
       case 'range':
-        return (e.start + ':' + e.end).toUpperCase()
+        return (e.start.name + ':' + e.end.name).toUpperCase()
       case 'cell':
-        return e.name.toUpperCase()
+        return e.cell.name.toUpperCase()
       case 'number':
         return e.value
       case 'string':
