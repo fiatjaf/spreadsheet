@@ -23,10 +23,10 @@ function makeCustomCSSDriver (initialRules = {}) {
       let { type } = mod
       switch (type) {
         case 'resize-row':
-          rules.rows[mod.index] = mod.size
+          rules.rows[mod.id] = mod.size
           break
         case 'resize-column':
-          rules.columns[mod.index] = mod.size
+          rules.columns[mod.id] = mod.size
           break
         case 'color':
         case 'background-color':
@@ -49,22 +49,22 @@ function makeCustomCSSDriver (initialRules = {}) {
 
 function render (rules) {
   var css = ''
-  for (let index in rules.rows) {
-    css += `.row:nth-child(${index}) .cell {
-      height: ${rules.rows[index]}px !important;
+  for (let id in rules.rows) {
+    css += `.row.row-id-${id} .cell {
+      height: ${rules.rows[id]}px !important;
     }\n`
-    if (rules.rows[index] > 40) {
-      css += `.row:nth-child(${index}) input {
+    if (rules.rows[id] > 40) {
+      css += `.row.row-id-${id} input {
         word-break: break-word !important;
       }\n`
     }
   }
-  for (let index in rules.columns) {
-    css += `.cell:nth-child(${index}) {
-      width: ${rules.columns[index]}px !important;
+  for (let id in rules.columns) {
+    css += `.cell.col-id-${id} {
+      width: ${rules.columns[id]}px !important;
     }\n`
-    if (rules.columns[index] < 82) {
-      css += `.cell:nth-child(${index}) input {
+    if (rules.columns[id] < 82) {
+      css += `.cell.col-id-${id} input {
         word-break: normal !important;
       }\n`
     }

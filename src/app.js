@@ -180,7 +180,7 @@ export default function app ({
     resizerTop.events('mousedown').map(e => ({
       resizing: true,
       type: 'resize-column',
-      index: e.ownerTarget.parentNode.dataset.index,
+      id: e.ownerTarget.parentNode.dataset.id,
       currentSize: e.ownerTarget.parentNode.offsetWidth,
       startedAt: e.clientX,
       pos: e.ownerTarget.classList.item(1)
@@ -188,7 +188,7 @@ export default function app ({
     resizerLeft.events('mousedown').map(e => ({
       resizing: true,
       type: 'resize-row',
-      index: e.ownerTarget.parentNode.dataset.index,
+      id: e.ownerTarget.parentNode.dataset.id,
       currentSize: e.ownerTarget.parentNode.offsetHeight,
       startedAt: e.clientY,
       pos: e.ownerTarget.classList.item(1)
@@ -199,10 +199,10 @@ export default function app ({
   let resize$ = DOM.select('.static').events('mousemove')
     .withLatestFrom(
       resizeState$,
-      (e, {resizing, type, index, currentSize, startedAt, pos}) => {
+      (e, {resizing, type, id, currentSize, startedAt, pos}) => {
         if (!resizing || !document.querySelectorAll('*:active').length) return
 
-        var mod = { type, index, size: 0 }
+        var mod = { type, id, size: 0 }
         var endedAt
 
         if (type === 'resize-row') endedAt = e.clientY

@@ -108,7 +108,9 @@ function modifications (actions) {
 
         // unmark the old selected range
         if (state.areaSelect.start) {
-          cells.bumpCellsInRange(state.areaSelect)
+          try {
+            cells.bumpCellsInRange(state.areaSelect)
+          } catch (e) { cells.bumpAllCells() }
           state.areaSelecting = false
           state.areaSelect = {}
         }
@@ -384,7 +386,9 @@ function modifications (actions) {
     actions.cellMouseDown$
       .map((cellName) => function startSelectingMod (state, cells) {
         // unmark the old selected range
-        cells.bumpCellsInRange(state.areaSelect)
+        try {
+          cells.bumpCellsInRange(state.areaSelect)
+        } catch (e) { cells.bumpAllCells() }
 
         let cell = cells.getByName(cellName)
         state.areaSelecting = true
@@ -840,7 +844,7 @@ function modifications (actions) {
           // insert row
           var newRow = []
           for (let n = 0; n < cells.byRowColumn[0].length; n++) {
-            let newCell = cells.makeCell(index, n)
+            let newCell = cells.makeCell(index, n, cells.columnIdAt(n))
             newRow[n] = newCell
             cells.byName[newCell.name] = newCell
             cells.byId[newCell.id] = newCell
@@ -859,7 +863,7 @@ function modifications (actions) {
             for (let c = 0; c < row.length; c++) {
               let cell = row[c]
               cell.row = r
-              cell.name = cells.makeCellName(cell.row, cell.column)
+              cell.name = cells.makeCellName(cell.row, cell.column, cells.columnIdAt(c))
               cells.byName[cell.name] = cell
               cells.bumpCell(cell)
             }

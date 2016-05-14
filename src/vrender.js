@@ -24,10 +24,10 @@ export const vrender = {
     return h('main.sheet-container', [
       vrender.top(state, cells),
       h('table.sheet', [
-        thunk.rowStatic('_', vrender.rowStatic, cells.numColumns())
+        thunk.rowStatic('_', vrender.rowStatic, cells.numColumns(), cells)
       ].concat(
         cells.byRowColumn.map((row, i) =>
-          thunk.row(i, vrender.row, state, row, cells.rowRev[i], i, cells)
+          thunk.row(i, vrender.row, state, row, row.rev, i, cells)
         )
       ))
     ])
@@ -42,7 +42,11 @@ export const vrender = {
     ])
   },
   row: function (state, row, _, rowIndex, cells) {
-    return h('tr.row', [vrender.cellStatic(rowIndex + 1, 'left', rowIndex + 1)].concat(
+    return h('tr.row', {
+      className: `row-id-${row.id}`
+    }, [
+      vrender.cellStatic(rowIndex + 1, 'left', row.id, rowIndex + 2)
+    ].concat(
       row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev, cells))
     ))
   },
@@ -61,7 +65,10 @@ export const vrender = {
         'calcerror': cell.calc === CALCERROR,
         'calculating': cell.calc === CALCULATING,
         'dependency': cell.name in state.dependencies
-      }, `cell-id-${cell.id}`),
+      },
+        `cell-id-${cell.id}`,
+        `col-id-${cell.columnId}`
+      ),
       dataset: {
         name: cell.name,
         id: cell.id
@@ -87,22 +94,23 @@ export const vrender = {
       }))
     }
   },
-  rowStatic: (ncolumns) => {
-    var cells = [vrender.cellStatic('', 'top left', 0)]
-    for (let i = 1; i < ncolumns + 1; i++) {
-      cells.push(vrender.cellStatic(
-        rangegen.enc(i - 1, false),
+  rowStatic: (ncolumns, cells) => {
+    var vtds = [vrender.cellStatic('', 'top left', '', 0)]
+    for (let i = 0; i < ncolumns + 0; i++) {
+      vtds.push(vrender.cellStatic(
+        rangegen.enc(i, false),
         'top',
-        i
+        cells.columnIdAt(i),
+        i + 2
       ))
     }
-    return h('tr.row.static', cells)
+    return h('tr.row.static', vtds)
   },
-  cellStatic: (label, location, index) =>
+  cellStatic: (label, location, id, index) =>
     h('td.cell.static', {
       key: label,
       className: location,
-      dataset: {index: index + 1}
+      dataset: {id, index}
     }, [
       h('span.resizer.first', '|'),
       label,

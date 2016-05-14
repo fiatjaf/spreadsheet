@@ -26,7 +26,7 @@ const drivers = {
   ADAPTWIDTH: makeAdaptWidthDriver(),
   CONTEXTMENU: makeContextMenuDriver(),
   UPDATED: updatedStateDriver,
-  CSS: makeCustomCSSDriver({columns: {'3': 80}, rows: {'4': 40}}),
+  CSS: makeCustomCSSDriver(),
   keydown: () => keydown$.share(),
   keypress: () => keypress$.share()
 }

@@ -11,8 +11,6 @@ class Grid {
     this.byId = {}
     this.byRowColumn = []
 
-    this.rowRev = {}
-
     this._currentHandle = null
     this._undoStack = []
     this._redoStack = []
@@ -20,16 +18,17 @@ class Grid {
     this.resetGrid(w, h)
   }
 
-  makeCell (row, col) {
+  makeCell (rowN, colN, columnId) {
     return {
       id: cuid.slug(),
+      row: rowN,
+      column: colN,
       raw: '',
       calc: '',
-      name: this.makeCellName(row, col),
-      row: row,
-      column: col,
+      name: this.makeCellName(rowN, colN),
       rev: Math.random(),
-      handle: false
+      handle: false,
+      columnId
     }
   }
 
@@ -42,18 +41,24 @@ class Grid {
     this.byId = {}
     this.byRowColumn = []
 
-    for (let col = 0; col < width; col++) {
-      for (let row = 0; row < height; row++) {
-        let cell = this.makeCell(row, col)
+    var columnIds = {}
+
+    for (let r = 0; r < height; r++) {
+      var row = []
+
+      for (let c = 0; c < width; c++) {
+        let columnId = columnIds[c] = columnIds[c] || cuid.slug()
+
+        let cell = this.makeCell(r, c, columnId)
 
         this.byName[cell.name] = cell
         this.byId[cell.id] = cell
-        this.byRowColumn[row] = (this.byRowColumn[row] || []).concat(cell)
+        row.push(cell)
       }
-    }
 
-    for (let row = 0; row < height; row++) {
-      this.rowRev[row] = (this.rowRev[row] || Math.random()) + 1
+      row.rev = Math.random()
+      row.id = cuid.slug()
+      this.byRowColumn[r] = row
     }
   }
 
@@ -160,25 +165,15 @@ class Grid {
     this.bumpCell(cell)
   }
 
-  idFromName (name) {
-    return this.byName[name].id
-  }
-
-  getById (id) {
-    return this.byId[id]
-  }
-
-  getByName (name) {
-    return this.byName[name]
-  }
-
-  getByRowColumn (row, column) {
-    return this.byRowColumn[row][column]
-  }
+  idFromName (name) { return this.byName[name].id }
+  getById (id) { return this.byId[id] }
+  getByName (name) { return this.byName[name] }
+  getByRowColumn (row, column) { return this.byRowColumn[row][column] }
+  columnIdAt (colIndex) { return this.byRowColumn[0][colIndex].columnId }
 
   bumpCell (cell) {
     cell.rev++
-    this.rowRev[cell.row]++
+    this.byRowColumn[cell.row].rev++
   }
 
   bumpCellByName (cellName) {
