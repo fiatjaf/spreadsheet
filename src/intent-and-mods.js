@@ -108,8 +108,7 @@ function modifications (actions) {
 
         // unmark the old selected range
         if (state.areaSelect.start) {
-          let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange)
+          cells.bumpCellsInRange(state.areaSelect)
           state.areaSelecting = false
           state.areaSelect = {}
         }
@@ -207,8 +206,7 @@ function modifications (actions) {
 
           // unmark the old selected range
           if (state.areaSelect.start) {
-            let inRange = cells.getCellsInRange(state.areaSelect)
-            cells.bumpCells(inRange)
+            cells.bumpCellsInRange(state.areaSelect)
             state.areaSelecting = false
             state.areaSelect = {}
           }
@@ -229,8 +227,7 @@ function modifications (actions) {
 
         // unmark the old selected range
         if (state.areaSelect.start) {
-          let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange)
+          cells.bumpCellsInRange(state.areaSelect)
           state.areaSelecting = false
           state.areaSelect = {}
         }
@@ -262,8 +259,7 @@ function modifications (actions) {
 
           // unmark the old selected range
           if (state.areaSelect.start) {
-            let inRange = cells.getCellsInRange(state.areaSelect)
-            cells.bumpCells(inRange)
+            cells.bumpCellsInRange(state.areaSelect)
             state.areaSelecting = false
             state.areaSelect = {}
           }
@@ -291,8 +287,7 @@ function modifications (actions) {
 
         // unmark the old selected range
         if (state.areaSelect.start) {
-          let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange)
+          cells.bumpCellsInRange(state.areaSelect)
           state.areaSelecting = false
           state.areaSelect = {}
         }
@@ -328,10 +323,9 @@ function modifications (actions) {
 
         // unmark the old selected range
         if (state.areaSelect.start) {
-          let inRange = cells.getCellsInRange(state.areaSelect)
+          cells.bumpCellsInRange(state.areaSelect)
           state.areaSelecting = null
           state.areaSelect = {}
-          cells.bumpCells(inRange)
         }
 
         if (state.editing) {
@@ -390,10 +384,7 @@ function modifications (actions) {
     actions.cellMouseDown$
       .map((cellName) => function startSelectingMod (state, cells) {
         // unmark the old selected range
-        if (state.areaSelect.start) {
-          let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange)
-        }
+        cells.bumpCellsInRange(state.areaSelect)
 
         let cell = cells.getByName(cellName)
         state.areaSelecting = true
@@ -533,8 +524,7 @@ function modifications (actions) {
           state.inject = add.toUpperCase()
 
           // erase the selection in this special case
-          let inRange = cells.getCellsInRange(state.areaSelect)
-          cells.bumpCells(inRange)
+          cells.bumpCellsInRange(state.areaSelect)
           if (state.selected) cells.bumpCellByName(state.selected)
           state.selected = null
           state.areaSelect = {}
@@ -770,13 +760,29 @@ function modifications (actions) {
         let index = parseInt(value)
         let kind = tag.split('-')[1]
 
+        // unselect everything (so we don't end with an unexisting cell selected)
+        cells.bumpCellsInRange()
+        if (state.selected) cells.bumpCellByName(state.selected)
+        state.areaSelect = {}
+        state.selected = null
+
         if (kind === 'ROW') {
           let lastRow = cells.byRowColumn[cells.byRowColumn.length - 1]
           for (let d = 0; d < lastRow.length; d++) { // remove lastRow cells from indexes
             delete cells.byName[lastRow[d].name]
             delete cells.byId[lastRow[d].id]
           }
-          cells.byRowColumn.splice(index, 1)[0] // drop row at index
+          let droppedRow = cells.byRowColumn.splice(index, 1)[0] // drop row at index
+
+          // automatically unmerge anything in the path
+          for (let d = 0; d < droppedRow.length; d++) {
+            let dropped = droppedRow[d]
+            let mergedIn = state.mergeGraph.mergedIn(dropped.id)
+            let toBump = state.mergeGraph.unmerge(mergedIn || dropped)
+            cells.bumpCells(toBump)
+            // TODO instead of unmerging, just remove the edge corresponding to this cell
+          }
+
           for (let r = index; r < cells.byRowColumn.length; r++) {
             // change the names of all cells in all rows after the dropped index, including it
             let row = cells.byRowColumn[r]
@@ -785,7 +791,6 @@ function modifications (actions) {
               cell.row = r
               cell.name = cells.makeCellName(cell.row, cell.column)
               cells.byName[cell.name] = cell
-              cells.bumpCell(cell)
             }
           }
         } else if (kind === 'COLUMN') {
@@ -795,11 +800,17 @@ function modifications (actions) {
 
             delete cells.byName[row[row.length - 1].name] // remove last cell from byName
             delete cells.byId[row[row.length - 1].id] // remove last cell from byId
-            row.splice(index, 1)[0] // remove cell at index from row
+            let dropped = row.splice(index, 1)[0] // remove cell at index from row
+
+            // automatically unmerge anything in the path
+            let mergedIn = state.mergeGraph.mergedIn(dropped.id)
+            let toBump = state.mergeGraph.unmerge(mergedIn || dropped)
+            cells.bumpCells(toBump)
+            // TODO instead of unmerging, just remove the edge corresponding to this cell
 
             for (let c = index; c < row.length; c++) {
-              // change the names of all cells after index, including it
               let cell = row[c]
+              // change the names of all cells after index, including it
               cell.column = c
               cell.name = cells.makeCellName(cell.row, cell.column)
               cells.byName[cell.name] = cell
@@ -814,9 +825,18 @@ function modifications (actions) {
     actions.insertLine$
       .map(({tag, value}) => function insertLineMod (state, cells) {
         let [kind, pos] = tag.split('-').slice(1)
-        let index = parseInt(value) + (pos === 'BEFORE' ? 0 : 1)
+        let index = parseInt(value)
+        index = index + (pos === 'BEFORE' ? 0 : 1)
+        var willMerge = {} // {[row/column index to merge]: target of the merge}
 
         if (kind === 'ROW') {
+          // check for merges in the row
+          for (let c = 0; c < cells.byRowColumn[index].length; c++) {
+            let cell = cells.byRowColumn[index][c]
+            let mergedIn = state.mergeGraph.mergedIn(cell.id)
+            if (mergedIn && mergedIn.row !== index) willMerge[c] = mergedIn
+          }
+
           // insert row
           var newRow = []
           for (let n = 0; n < cells.byRowColumn[0].length; n++) {
@@ -824,6 +844,12 @@ function modifications (actions) {
             newRow[n] = newCell
             cells.byName[newCell.name] = newCell
             cells.byId[newCell.id] = newCell
+
+            // perform the merge
+            if (willMerge[n]) {
+              state.mergeGraph.merge(willMerge[n], [newCell])
+              cells.bumpCell(willMerge[n])
+            }
           }
           cells.byRowColumn.splice(index, 0, newRow)
 
@@ -842,11 +868,24 @@ function modifications (actions) {
           for (let r = 0; r < cells.byRowColumn.length; r++) {
             let row = cells.byRowColumn[r]
 
+            // check for merges in the column
+            for (let r = 0; r < cells.byRowColumn.length; r++) {
+              let cell = cells.byRowColumn[r][index]
+              let mergedIn = state.mergeGraph.mergedIn(cell.id)
+              if (mergedIn && mergedIn.column !== index) willMerge[r] = mergedIn
+            }
+
             // insert cell
             let newCell = cells.makeCell(r, index)
             cells.byName[newCell.name] = newCell
             cells.byId[newCell.id] = newCell
             row.splice(index, 0, newCell)
+
+            // perform the merge
+            if (willMerge[r]) {
+              state.mergeGraph.merge(willMerge[r], [newCell])
+              cells.bumpCell(willMerge[r])
+            }
 
             for (let c = index + 1; c < row.length; c++) {
               // change the names of all cells after the inserted index

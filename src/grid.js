@@ -198,6 +198,10 @@ class Grid {
     }
   }
 
+  bumpCellsInRange (range) {
+    this.bumpCells(this.getCellsInRange(range))
+  }
+
   getCellsInRange (range) {
     var inRange = []
 

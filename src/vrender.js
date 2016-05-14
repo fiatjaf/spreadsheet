@@ -63,7 +63,7 @@ export const vrender = {
         'dependency': cell.name in state.dependencies
       }, `cell-id-${cell.id}`),
       dataset: {
-        name: mergedIn && mergedIn.name || cell.name,
+        name: cell.name,
         id: cell.id
       },
       rowSpan: spans.row,
