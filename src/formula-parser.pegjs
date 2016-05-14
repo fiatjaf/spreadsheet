@@ -90,7 +90,7 @@ range
   = c1:cell ":" c2:cell { return {start: c1, end: c2} }
 
 cell
-  = l:[a-z]i+ n:number { return (l.join('') + n).toLowerCase() }
+  = l:[a-z]i+ n:number { return (l.join('') + n).toUpperCase() }
   
 number
   = d1:[0-9]* '.' d2:[0-9]* {
