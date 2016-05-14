@@ -160,6 +160,10 @@ class Grid {
     this.bumpCell(cell)
   }
 
+  idFromName (name) {
+    return this.byName[name].id
+  }
+
   getById (id) {
     return this.byId[id]
   }
@@ -270,15 +274,7 @@ class Grid {
   }
 
   exportToArray () {
-    var a = []
-    for (let r = 0; r < this.byRowColumn.length; r++) {
-      var aa = []
-      for (let c = 0; c < this.byRowColumn[r].length; c++) {
-        aa.push(this.byRowColumn[r][c].raw)
-      }
-      a.push(aa)
-    }
-    return a
+    return this.byRowColumn.map(row => row.map(cell => cell.raw))
   }
 }
 

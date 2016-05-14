@@ -27,7 +27,7 @@ export const vrender = {
         thunk.rowStatic('_', vrender.rowStatic, cells.numColumns())
       ].concat(
         cells.byRowColumn.map((row, i) =>
-          thunk.row(i, vrender.row, state, row, cells.rowRev[i], i)
+          thunk.row(i, vrender.row, state, row, cells.rowRev[i], i, cells)
         )
       ))
     ])
@@ -41,33 +41,15 @@ export const vrender = {
       })
     ])
   },
-  rowStatic: (ncolumns) => {
-    var cells = [vrender.cellStatic('', 'top left', 0)]
-    for (let i = 1; i < ncolumns + 1; i++) {
-      cells.push(vrender.cellStatic(
-        rangegen.enc(i - 1, false),
-        'top',
-        i
-      ))
-    }
-    return h('tr.row.static', cells)
-  },
-  cellStatic: (label, location, index) => h('td.cell.static', {
-    key: label,
-    className: location,
-    dataset: {index: index + 1}
-  }, [
-    h('span.resizer.first', '|'),
-    label,
-    h('span.resizer.last', '|')
-  ]),
-  row: function (state, row, _, rowIndex) {
+  row: function (state, row, _, rowIndex, cells) {
     return h('tr.row', [vrender.cellStatic(rowIndex + 1, 'left', rowIndex + 1)].concat(
-      row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev))
+      row.map(cell => thunk.cell(cell.name, vrender.cell, state, cell, cell.rev, cells))
     ))
   },
-  cell: function (state, cell) {
-    var mergedIn = state.mergeGraph.mergedIn(cell.name)
+  cell: function (state, cell, _, cells) {
+    var mergedIn = state.mergeGraph.mergedIn(cell.id)
+    var mergedOver = state.mergeGraph.mergedOver(cell.id)
+    var spans = state.mergeGraph.spans(cell, mergedOver)
 
     let props = {
       className: cx({
@@ -81,11 +63,11 @@ export const vrender = {
         'dependency': cell.name in state.dependencies
       }, `cell-id-${cell.id}`),
       dataset: {
-        name: mergedIn || cell.name,
+        name: mergedIn && mergedIn.name || cell.name,
         id: cell.id
       },
-      rowSpan: state.mergeGraph.rowSpan(cell.name),
-      colSpan: state.mergeGraph.colSpan(cell.name),
+      rowSpan: spans.row,
+      colSpan: spans.col,
       key: cell.id
     }
 
@@ -104,7 +86,28 @@ export const vrender = {
         'value-hook': !state.editingTop ? null : new ValueHook(raw)
       }))
     }
-  }
+  },
+  rowStatic: (ncolumns) => {
+    var cells = [vrender.cellStatic('', 'top left', 0)]
+    for (let i = 1; i < ncolumns + 1; i++) {
+      cells.push(vrender.cellStatic(
+        rangegen.enc(i - 1, false),
+        'top',
+        i
+      ))
+    }
+    return h('tr.row.static', cells)
+  },
+  cellStatic: (label, location, index) =>
+    h('td.cell.static', {
+      key: label,
+      className: location,
+      dataset: {index: index + 1}
+    }, [
+      h('span.resizer.first', '|'),
+      label,
+      h('span.resizer.last', '|')
+    ])
 }
 
 export const thunk = {

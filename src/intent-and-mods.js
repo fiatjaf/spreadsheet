@@ -739,15 +739,15 @@ function modifications (actions) {
           let inRange = cells.getCellsInRange(state.areaSelect)
           let first = inRange.shift()
 
-          var mergeNames = []
+          // do not execute this operation if some cell in the range is already merged.
           for (let i = 0; i < inRange.length; i++) {
             let cell = inRange[i]
-            if (state.mergeGraph.isMergedOver(cell.name)) {
+            if (state.mergeGraph.isMergedOver(cell.id)) {
               return {state, cells}
             }
-            mergeNames.push(cell.name)
           }
-          state.mergeGraph.merge(first.name, mergeNames)
+
+          state.mergeGraph.merge(first, inRange)
 
           cells.bumpCells(inRange)
           cells.bumpCell(first)
@@ -759,10 +759,8 @@ function modifications (actions) {
     actions.unmergeCells$
       .map(() => function unmergeCellsMod (state, cells) {
         if (state.selected) {
-          let modified = state.mergeGraph.unmerge(state.selected)
-          for (let i = 0; i < modified.length; i++) {
-            cells.bumpCellByName(modified[i])
-          }
+          let modified = state.mergeGraph.unmerge(cells.getByName(state.selected))
+          cells.bumpCells(modified)
         }
         return {state, cells}
       }),

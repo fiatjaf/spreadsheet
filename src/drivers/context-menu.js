@@ -30,7 +30,7 @@ function makeContextMenuDriver () {
   })
 
   return function contextMenuDriver (trigger$) {
-    trigger$.subscribe(({e, state, tag}) => {
+    trigger$.subscribe(({e, state, cells, tag}) => {
       var items
 
       if (tag === 'CELL') {
@@ -48,7 +48,8 @@ function makeContextMenuDriver () {
             (state.areaSelect.start.name === state.selected && state.areaSelect.end.name === state.selected)
           },
           {title: 'Unmerge cells', tag: 'UNMERGE', disabled:
-            !state.selected || !state.mergeGraph.isMergedOver(state.selected)
+            !state.selected ||
+            !state.mergeGraph.isMergedOver(cells.idFromName(state.selected))
           }
         ]
       } else if (tag === 'HEADER') {

@@ -20,9 +20,24 @@ export default function app ({
 }) {
   // initializing state
   state$ = (state$ || Rx.Observable.just({}))
-    .map(baseState => {
+    .withLatestFrom(cells$, (baseState, cells) => {
+      // deal with `.merged` that refers to cell names, changing it to express actual
+      // cell objects relationships.
+      var mergeGraph = new MergeGraph()
+      for (let baseName in baseState.merged) {
+        let baseCell = cells.getByName(baseName.toUpperCase())
+
+        mergeGraph.merge(
+          baseCell,
+          baseState.merged[baseName]
+            .map(mn => mn.toUpperCase())
+            .map(mergedName => cells.getByName(mergedName))
+        )
+      }
+      delete baseState.merged
+
       let state = extend({areaSelect: {}, handleDrag: {}, dependencies: {}}, baseState)
-      state.mergeGraph = new MergeGraph(state.merged || {})
+      state.mergeGraph = mergeGraph
       return state
     })
     .shareReplay(1)

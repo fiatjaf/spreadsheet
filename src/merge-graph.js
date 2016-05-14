@@ -1,39 +1,28 @@
 import Graph from 'graph.js/dist/graph.js'
 
 class MergeGraph extends Graph {
-  constructor (merged = {}) {
-    // expects an object of arrays like {a1: [a2, b1, b2], c5: [c6]}
-    super()
-
-    this._colSpan = {}
-    this._rowSpan = {}
-
-    for (let base in merged) {
-      this.merge(base, merged[base])
-    }
-  }
-
-  // cell A1 is mergedOver A2, B1, B2
-  mergedOver (cell) { // passing a1
+  // cellId A1 is mergedOver A2, B1, B2
+  mergedOver (cellId) { // passing A1 (in fact, the id of the cell corresponding to A1)
     try {
-      return this.verticesTo(cell) // returns Iterator{a2: true, b1: true, b2: true}
+      return this.verticesTo(cellId)
+      // returns Iterator{a2: true, b1: true, b2: true} (the ids)
     } catch (e) {
       return []
     }
   }
 
-  isMergedOver (cell) {
-    for (let _ of this.mergedOver(cell)) {
-      return _ && true
+  isMergedOver (cellId) {
+    for (let _ of this.mergedOver(cellId)) {
+      return true
     }
     return false
   }
 
-  // cell B1 is merged into A1
-  mergedIn (cell) { // passing b1
+  // cellId B1 is merged into A1
+  mergedIn (cellId) { // passing the id corresponding to B1
     try {
-      for (let [base] of this.verticesFrom(cell)) {
-        return base // returns a1
+      for (let [_, baseCell] of this.verticesFrom(cellId)) {
+        return baseCell // returns A1, the cell object
       }
     } catch (e) {
       return null
@@ -41,40 +30,23 @@ class MergeGraph extends Graph {
   }
 
   // merging A1 over...
-  merge (base, over) {
-    const l = /\D+/
-    const n = /\d+/
-    var firstNumber = parseInt(n.exec(base)[0])
-    var lastNumber = firstNumber
-    var firstLetter = l.exec(base)[0]
-    var lastLetter = firstLetter
-
-    this.addVertex(base)
+  merge (baseCell, over) {
+    this.addVertex(baseCell.id, baseCell)
 
     for (let i = 0; i < over.length; i++) {
-      this.addVertex(over[i])
-      this.addEdge(over[i], base)
-
-      let number = parseInt(n.exec(over[i])[0])
-      let letter = l.exec(over[i])[0]
-      lastNumber = number > lastNumber ? number : lastNumber
-      lastLetter = letter > lastLetter ? letter : lastLetter
+      let overCell = over[i]
+      this.addVertex(overCell.id, overCell)
+      this.addEdge(overCell.id, baseCell.id)
     }
-
-    this._rowSpan[base] = parseInt(lastNumber) - parseInt(firstNumber) + 1
-    this._colSpan[base] = lastLetter.charCodeAt() - firstLetter.charCodeAt() + 1
   }
 
-  unmerge (base) {
-    var modified = [base]
+  unmerge (baseCell) {
+    var modified = [baseCell]
 
-    for (let [o] of this.mergedOver(base)) {
-      this.removeEdge(o, base)
-      modified.push(o)
+    for (let [overId, overCell] of this.mergedOver(baseCell.id)) {
+      this.removeEdge(overId, baseCell.id)
+      modified.push(overCell)
     }
-
-    delete this._rowSpan[base]
-    delete this._colSpan[base]
 
     return modified
   }
@@ -82,20 +54,32 @@ class MergeGraph extends Graph {
   exportToMergedProperty () {
     var merged = {}
     for (let [from, to] of this.edges()) {
-      merged[to] = merged[to] || []
-      merged[to].push(from)
+      let fromName = this.vertexValue(from).name
+      let toName = this.vertexValue(to).name
+      merged[toName] = merged[toName] || []
+      merged[toName].push(fromName)
     }
     return merged
   }
 
-  rowSpan (cell) {
-    return this._rowSpan[cell] || 1
-  }
+  spans (baseCell, vert) { // `vert` is an Iterator.<cellId, cell> (as returned by .mergedOver)
+    if (vert.length === 0) {
+      return {row: 1, col: 1}
+    }
 
-  colSpan (cell) {
-    return this._colSpan[cell] || 1
+    let {row: baseRow, column: baseColumn} = baseCell
+    var maxRow = baseRow
+    var maxColumn = baseColumn
+    for (let [_, cell] of vert) {
+      let {row, column} = cell
+      maxColumn = maxColumn > column ? maxColumn : column
+      maxRow = maxRow > row ? maxRow : row
+    }
+    return {
+      row: 1 + maxRow - baseRow,
+      col: 1 + maxColumn - baseColumn
+    }
   }
 }
 
 module.exports = MergeGraph
-
