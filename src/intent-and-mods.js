@@ -772,8 +772,9 @@ function modifications (actions) {
 
         if (kind === 'ROW') {
           let lastRow = cells.byRowColumn[cells.byRowColumn.length - 1]
-          for (let d = 0; d < lastRow.length; d++) { // remove lastRow cells from byName
+          for (let d = 0; d < lastRow.length; d++) { // remove lastRow cells from indexes
             delete cells.byName[lastRow[d].name]
+            delete cells.byId[lastRow[d].id]
           }
           cells.byRowColumn.splice(index, 1)[0] // drop row at index
           for (let r = index; r < cells.byRowColumn.length; r++) {
@@ -792,7 +793,8 @@ function modifications (actions) {
           for (let r = 0; r < cells.byRowColumn.length; r++) {
             let row = cells.byRowColumn[r]
 
-            delete cells.byName[row[row.length - 1].name] // remove last cell cell from byName
+            delete cells.byName[row[row.length - 1].name] // remove last cell from byName
+            delete cells.byId[row[row.length - 1].id] // remove last cell from byId
             row.splice(index, 1)[0] // remove cell at index from row
 
             for (let c = index; c < row.length; c++) {
@@ -821,6 +823,7 @@ function modifications (actions) {
             let newCell = cells.makeCell(index, n)
             newRow[n] = newCell
             cells.byName[newCell.name] = newCell
+            cells.byId[newCell.id] = newCell
           }
           cells.byRowColumn.splice(index, 0, newRow)
 
@@ -842,6 +845,7 @@ function modifications (actions) {
             // insert cell
             let newCell = cells.makeCell(r, index)
             cells.byName[newCell.name] = newCell
+            cells.byId[newCell.id] = newCell
             row.splice(index, 0, newCell)
 
             for (let c = index + 1; c < row.length; c++) {
