@@ -34,7 +34,7 @@ export const vrender = {
   },
   top: function (state, cells) {
     let selected = cells.getByName(state.selected)
-    let value = state.currentInput || selected && selected.raw || ''
+    let value = state.currentInput || selected && selected.rawValue() || ''
     return h('div.top', {className: state.editingTop ? 'editing' : ''}, [
       h('input', {
         'input-hook': state.editingTop ? null : new ValueHook(value)
@@ -80,7 +80,7 @@ export const vrender = {
 
     if (cell.name !== state.editing) {
       return h('td.cell.dyn', props, [
-        h('div.text', (cell.calc === null ? cell.raw : cell.calc).toString()),
+        h('div.text', cell.displayValue()),
         cell.handle ? h('.handle', {innerHTML: '&#8203;'}) : null
       ])
     } else {
@@ -120,6 +120,8 @@ export const vrender = {
 
 export const thunk = {
   top: partial(function ([currState], [nextState]) {
+    if (currState.selected !== nextState.selected) return true
+    if (currState.currentInput !== nextState.currentInput) return true
     return false
   }),
   row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {

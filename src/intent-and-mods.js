@@ -1,7 +1,7 @@
 import Rx from 'rx'
 import keycode from 'keycode'
 
-import { cellInRange, between } from './grid'
+import { makeCellName, Cell, cellInRange, between } from './grid'
 import { handleValueGenerator } from './handle-drag'
 
 module.exports.intent = intent
@@ -238,8 +238,8 @@ function modifications (actions) {
         let cell = cells.getByName(cellName)
         state.editing = cell.name
         state.editingTop = false
-        state.valueBeforeEdit = cell.raw
-        state.currentInput = cell.raw
+        state.valueBeforeEdit = cell.rawValue()
+        state.currentInput = cell.rawValue()
         cells.bumpCell(cell)
         return {state, cells}
       }),
@@ -252,7 +252,7 @@ function modifications (actions) {
           // set the cell value and mark it as editing
           state.editing = cell.name
           state.editingTop = false
-          state.valueBeforeEdit = cell.raw
+          state.valueBeforeEdit = cell.rawValue()
           state.currentInput = character
           cells.bumpCell(cell)
 
@@ -280,8 +280,8 @@ function modifications (actions) {
         state.editing = cell.name
         state.editingTop = true // editing at the top
 
-        state.valueBeforeEdit = cell.raw
-        state.currentInput = cell.raw
+        state.valueBeforeEdit = cell.rawValue()
+        state.currentInput = cell.rawValue()
         cells.bumpCell(cell)
 
         // unselect it
@@ -793,7 +793,7 @@ function modifications (actions) {
             for (let c = 0; c < row.length; c++) {
               let cell = row[c]
               cell.row = r
-              cell.name = cells.makeCellName(cell.row, cell.column)
+              cell.name = makeCellName(cell.row, cell.column)
               cells.byName[cell.name] = cell
             }
           }
@@ -816,7 +816,7 @@ function modifications (actions) {
               let cell = row[c]
               // change the names of all cells after index, including it
               cell.column = c
-              cell.name = cells.makeCellName(cell.row, cell.column)
+              cell.name = makeCellName(cell.row, cell.column)
               cells.byName[cell.name] = cell
               cells.bumpCell(cell)
             }
@@ -844,7 +844,7 @@ function modifications (actions) {
           // insert row
           var newRow = []
           for (let n = 0; n < cells.byRowColumn[0].length; n++) {
-            let newCell = cells.makeCell(index, n, cells.columnIdAt(n))
+            let newCell = new Cell(index, n, cells.columnIdAt(n))
             newRow[n] = newCell
             cells.byName[newCell.name] = newCell
             cells.byId[newCell.id] = newCell
@@ -863,7 +863,7 @@ function modifications (actions) {
             for (let c = 0; c < row.length; c++) {
               let cell = row[c]
               cell.row = r
-              cell.name = cells.makeCellName(cell.row, cell.column, cells.columnIdAt(c))
+              cell.name = makeCellName(cell.row, cell.column, cells.columnIdAt(c))
               cells.byName[cell.name] = cell
               cells.bumpCell(cell)
             }
@@ -880,7 +880,7 @@ function modifications (actions) {
             }
 
             // insert cell
-            let newCell = cells.makeCell(r, index)
+            let newCell = new Cell(r, index)
             cells.byName[newCell.name] = newCell
             cells.byId[newCell.id] = newCell
             row.splice(index, 0, newCell)
@@ -895,7 +895,7 @@ function modifications (actions) {
               // change the names of all cells after the inserted index
               let cell = row[c]
               cell.column = c
-              cell.name = cells.makeCellName(cell.row, cell.column)
+              cell.name = makeCellName(cell.row, cell.column)
               cells.byName[cell.name] = cell
               cells.bumpCell(cell)
             }

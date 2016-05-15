@@ -1,6 +1,8 @@
 import rangegen from 'rangegen'
 import cuid from 'cuid'
 
+import { printFormula } from './helpers'
+
 var calc = require('./calc').default
 
 class Grid {
@@ -19,24 +21,6 @@ class Grid {
     this.resetGrid(w, h)
   }
 
-  makeCell (rowN, colN, columnId) {
-    return {
-      id: cuid.slug(),
-      row: rowN,
-      column: colN,
-      raw: '',
-      calc: '',
-      name: this.makeCellName(rowN, colN),
-      rev: Math.random(),
-      handle: false,
-      columnId
-    }
-  }
-
-  makeCellName (row, col) {
-    return `${rangegen.enc(col, true)}${row + 1}`
-  }
-
   resetGrid (width, height) {
     this.byName = {}
     this.byId = {}
@@ -50,7 +34,7 @@ class Grid {
       for (let c = 0; c < width; c++) {
         let columnId = columnIds[c] = columnIds[c] || cuid.slug()
 
-        let cell = this.makeCell(r, c, columnId)
+        let cell = new Cell(r, c, columnId)
 
         this.byName[cell.name] = cell
         this.byId[cell.id] = cell
@@ -278,8 +262,41 @@ class Grid {
   }
 }
 
+export class Cell {
+  constructor (rowN, colN, columnId) {
+    this.id = cuid.slug()
+    this.row = rowN
+    this.column = colN
+    this.raw = ''
+    this.calc = ''
+    this.name = makeCellName(rowN, colN)
+    this.rev = Math.random()
+    this.handle = false
+    this.columnId = columnId
+
+    this._parsedFormula = null
+    this.displayValue = this.justGetRaw
+    this.rawValue = this.justGetRaw
+  }
+
+  formula (expr) {
+    if (expr) {
+      this._parsedFormula = expr
+      this.rawValue = this.renderParsedFormula
+      this.displayValue = this.justGetCalc
+    } else {
+      this.rawValue = this.justGetRaw
+      this.displayValue = this.justGetRaw
+    }
+  }
+
+  justGetRaw () { return this.raw }
+  justGetCalc () { return this.calc.toString() }
+  renderParsedFormula () { return '=' + printFormula(this._parsedFormula) }
+}
+
 export const between = (n, a, b) => a < b ? (a <= n) && (n <= b) : (b <= n) && (n <= a)
-export function cellInRange (cell, range) {
+export const cellInRange = (cell, range) => {
   try {
     return between(cell.column, range.start.column, range.end.column) &&
            between(cell.row, range.start.row, range.end.row)
@@ -288,5 +305,6 @@ export function cellInRange (cell, range) {
     return false
   }
 }
+export const makeCellName = (row, col) => `${rangegen.enc(col, true)}${row + 1}`
 
 export default Grid

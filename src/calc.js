@@ -3,7 +3,6 @@ import * as Promise from 'bluebird'
 
 import depGraph from './dep-graph'
 import formulaParser from '../lib/formula-parser'
-import { renderParsedFormula } from './helpers'
 import { FORMULAERROR, CALCERROR, CALCULATING } from './const'
 
 import { notify } from './drivers/updated-state'
@@ -50,11 +49,13 @@ export default function calc (cell, changed) {
         cell.raw = ''
         cell.calc = ''
       }
-      cell.raw = renderParsedFormula(expr)
     } catch (e) {
       cell.calc = FORMULAERROR
       return
     }
+
+    // store the parsed formula
+    cell.formula(expr)
 
     // calcExpr returns a promise
     calcExpr.call(this, expr, cell)
@@ -69,7 +70,9 @@ export default function calc (cell, changed) {
 
     cell.calc = CALCULATING
   } else {
+    // not a formula
     cell.calc = cell.raw
+    cell.formula(false)
   }
 }
 

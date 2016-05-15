@@ -8,10 +8,6 @@ export function deselect () {
   else if ('empty' in selection) selection.empty()
 }
 
-export function renderParsedFormula (expr) {
-  return '=' + print(expr)
-}
-
 const operators = {
   MULTIPLY: '*',
   SUM: '+',
@@ -19,7 +15,7 @@ const operators = {
   SUBTRACT: '-'
 }
 
-function print (e) {
+export function printFormula (e) {
   if (e.type !== 'function') {
     switch (e.type) {
       case 'range':
@@ -40,12 +36,12 @@ function print (e) {
   }
 
   if (e.operator) {
-    return print(e.arguments[0]) + operators[e.fn] + print(e.arguments[1])
+    return printFormula(e.arguments[0]) + operators[e.fn] + printFormula(e.arguments[1])
   }
 
   return `${e.fn}(${
     e.arguments
-      .map(arg => print(arg))
+      .map(arg => printFormula(arg))
       .filter(p => p)
       .join(', ')
   })`
