@@ -3,7 +3,6 @@ require('babel-polyfill')
 import Rx from 'rx'
 import Cycle from '@cycle/core'
 import {makeDOMDriver} from '@cycle/dom'
-import {restart, restartable} from 'cycle-restart'
 
 const makeCustomCSSDriver = require('./drivers/custom-css')
 const makeCellsDriver = require('./drivers/cells')
@@ -18,7 +17,7 @@ let keydown$ = Rx.Observable.fromEvent(document, 'keydown')
 let keypress$ = Rx.Observable.fromEvent(document, 'keypress')
 
 const drivers = {
-  DOM: restartable(makeDOMDriver('#spreadsheet'), {pauseSinksWhileReplaying: false}),
+  DOM: makeDOMDriver('#spreadsheet'),
   COPYPASTE: makeCopyPasteDriver(),
   INJECT: makeInjectCellDriver(),
   CELLS: makeCellsDriver(10, 10),
@@ -31,11 +30,4 @@ const drivers = {
   keypress: () => keypress$.share()
 }
 
-const {sinks, sources} = Cycle.run(app, drivers)
-
-if (module && module.hot) {
-  module.hot.accept('./app', () => {
-    app = require('./app').default
-    restart(app, drivers, {sinks, sources})
-  })
-}
+Cycle.run(app, drivers)

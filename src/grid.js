@@ -10,15 +10,25 @@ class Grid {
     this.calc = calc.bind(this)
     global.GLOBAL_GET_CELL = name => this.getByName(name) // this magic will be used inside the peg parser
 
-    this.byName = {}
-    this.byId = {}
-    this.byRowColumn = []
-
     this._currentHandle = null
     this._undoStack = []
     this._redoStack = []
 
-    this.resetGrid(w, h)
+    if (w && h) {
+      // standard instantiation
+      this.byName = {}
+      this.byId = {}
+      this.byRowColumn = []
+
+      this.resetGrid(w, h)
+    } else if (typeof w === 'object') {
+      // load from a serialize dump
+      this._load(w)
+    }
+  }
+
+  static load (dumpd) {
+    return new this(dumpd)
   }
 
   resetGrid (width, height) {
@@ -27,23 +37,50 @@ class Grid {
     this.byRowColumn = []
 
     var columnIds = {}
-
     for (let r = 0; r < height; r++) {
       var row = []
 
       for (let c = 0; c < width; c++) {
         let columnId = columnIds[c] = columnIds[c] || cuid.slug()
-
         let cell = new Cell(r, c, columnId)
 
         this.byName[cell.name] = cell
         this.byId[cell.id] = cell
-        row.push(cell)
+        row[c] = cell
       }
 
       row.rev = Math.random()
       row.id = cuid.slug()
       this.byRowColumn[r] = row
+    }
+  }
+
+  _load (dumpd) {
+    this.byRowColumn = []
+    this.byId = {}
+    this.byName = {}
+
+    for (let r = 0; r < dumpd.cells.length; r++) {
+      var row = []
+      for (let c = 0; c < dumpd.cells[r].length; c++) {
+        let cell = new Cell(r, c /*, columnId will be set on the next line */)
+        cell.load(dumpd.cells[r][c])
+
+        row[c] = cell
+        this.byName[cell.name] = cell
+        this.byId[cell.id] = cell
+      }
+      row.id = dumpd.rowIds[r]
+      row.rev = Math.random()
+
+      this.byRowColumn[r] = row
+    }
+  }
+
+  dump () {
+    return {
+      rowIds: this.byRowColumn.map(row => row.id),
+      cells: this.byRowColumn.map(row => row.map(cell => cell.dump()))
     }
   }
 
@@ -303,6 +340,24 @@ export class Cell {
   justGetRaw () { return this.raw }
   justGetCalc () { return this.calc.toString() }
   renderParsedFormula () { return '=' + printFormula(this._parsedFormula) }
+
+  dump () {
+    return {
+      r: this.raw,
+      c: this.calc,
+      i: this.id,
+      o: this.columnId,
+      f: this._parsedFormula
+    }
+  }
+
+  load (dumpd) {
+    this.id = dumpd.i
+    this.raw = dumpd.r
+    this.calc = dumpd.c
+    this.columnId = dumpd.o
+    this.formula(dumpd.f)
+  }
 }
 
 export const between = (n, a, b) => a < b ? (a <= n) && (n <= b) : (b <= n) && (n <= a)
