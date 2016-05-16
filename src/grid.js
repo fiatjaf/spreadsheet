@@ -49,6 +49,7 @@ class Grid {
 
   resizeGrid (width, height) {
     var oldByName = this.byName
+    var oldByRowColumn = this.byRowColumn
 
     this.resetGrid(width, height)
 
@@ -60,8 +61,17 @@ class Grid {
 
         delete this.byId[cell.id]
         cell.id = oldCell.id
+        cell.columnId = oldCell.columnId
         this.byId[cell.id] = cell
       }
+    }
+
+    for (let r = 0; r < oldByRowColumn.length; r++) {
+      let oldRow = oldByRowColumn[r]
+      let row = this.byRowColumn[r]
+      try {
+        row.id = oldRow.id
+      } catch (e) {}
     }
   }
 
