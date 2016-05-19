@@ -23,13 +23,7 @@ export const vrender = {
   main: function (state, cells) {
     return h('main.sheet-container', [
       vrender.top(state, cells),
-      h('table.sheet', [
-        thunk.rowStatic('_', vrender.rowStatic, cells.numColumns(), cells)
-      ].concat(
-        cells.byRowColumn.map((row, i) =>
-          thunk.row(i, vrender.row, state, row, row.rev, i, cells)
-        )
-      ))
+      thunk.sheet('~', vrender.sheet, state, cells, cells.rev)
     ])
   },
   top: function (state, cells) {
@@ -40,6 +34,15 @@ export const vrender = {
         'input-hook': state.editingTop ? null : new ValueHook(value)
       })
     ])
+  },
+  sheet: function (state, cells) {
+    return h('table.sheet', [
+      thunk.rowStatic('_', vrender.rowStatic, cells.numColumns(), cells)
+    ].concat(
+      cells.byRowColumn.map((row, i) =>
+        thunk.row(i, vrender.row, state, row, row.rev, i, cells)
+      )
+    ))
   },
   row: function (state, row, _, rowIndex, cells) {
     return h('tr.row', {
@@ -123,6 +126,9 @@ export const thunk = {
     if (currState.selected !== nextState.selected) return true
     if (currState.currentInput !== nextState.currentInput) return true
     return false
+  }),
+  sheet: partial(function ([_0, _1, currCellsRev], [__0, __1, nextCellsRev]) {
+    return currCellsRev === nextCellsRev
   }),
   row: partial(function ([currState, currRow, currRowRev], [nextState, nextRow, nextRowRev]) {
     return currRowRev === nextRowRev

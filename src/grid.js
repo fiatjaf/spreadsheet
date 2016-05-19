@@ -10,6 +10,7 @@ class Grid {
     this.calc = calc.bind(this)
     global.GLOBAL_GET_CELL = name => this.getByName(name) // this magic will be used inside the peg parser
 
+    this.rev = 0
     this._currentHandle = null
     this._undoStack = []
     this._redoStack = []
@@ -206,6 +207,7 @@ class Grid {
   bumpCell (cell) {
     cell.rev++
     this.byRowColumn[cell.row].rev++
+    this.rev++
   }
 
   bumpCellByName (cellName) {
