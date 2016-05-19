@@ -1,6 +1,7 @@
 import rangegen from 'rangegen'
 import cuid from 'cuid'
 
+import formulaParser from '../lib/formula-parser'
 import { printFormula } from './helpers'
 
 var calc = require('./calc').default
@@ -75,6 +76,11 @@ class Grid {
       row.rev = Math.random()
 
       this.byRowColumn[r] = row
+    }
+
+    for (let cellId in this.byId) {
+      // only do this after all cells are loaded and indexed
+      this.byId[cellId].loadFormula()
     }
   }
 
@@ -349,7 +355,7 @@ export class Cell {
       c: this.calc,
       i: this.id,
       o: this.columnId,
-      f: this._parsedFormula
+      f: this._parsedFormula ? this.renderParsedFormula() : null
     }
   }
 
@@ -358,7 +364,11 @@ export class Cell {
     this.raw = dumpd.r
     this.calc = dumpd.c
     this.columnId = dumpd.o
-    this.formula(dumpd.f)
+    this._formulaToLoad = dumpd.f
+  }
+
+  loadFormula () {
+    this.formula(this._formulaToLoad ? formulaParser.parse(this._formulaToLoad) : false)
   }
 }
 
