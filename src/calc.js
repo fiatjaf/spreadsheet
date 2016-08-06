@@ -18,9 +18,13 @@ for (let name in formulajs) {
   }
 }
 
-// a simple json http function
+// simple json http functions
 functions['GET'] = (url) => window.fetch(url).then(res => res.text())
 functions['GETJSON'] = (url) => window.fetch(url).then(res => res.json())
+
+export function registerFunction (name, fn) { // fn must return a promise.
+  functions[name.toUpperCase()] = fn
+}
 
 export default function calc (cell, changed) {
   // remove all deps since the formula was changed
